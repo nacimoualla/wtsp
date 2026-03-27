@@ -102,14 +102,14 @@ export default function ChatPage() {
             placeholder="Your Name"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="mb-4 w-full rounded-lg border text-black border-zinc-300 px-4 py-3 text-lg outline-none focus:border-blue-500"
+            className="mb-4 w-full rounded-lg border bg-white text-black placeholder-zinc-500 border-zinc-300 px-4 py-3 text-lg outline-none focus:border-blue-500"
           />
           <input
             type="password"
             placeholder="Secret Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mb-6 w-full rounded-lg border text-black border-zinc-300 px-4 py-3 text-lg outline-none focus:border-blue-500"
+            className="mb-6 w-full rounded-lg border bg-white text-black placeholder-zinc-500 border-zinc-300 px-4 py-3 text-lg outline-none focus:border-blue-500"
           />
 
           <button
@@ -173,7 +173,7 @@ export default function ChatPage() {
           placeholder="Type a message..."
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          className="flex-1 rounded-full border border-zinc-300 px-5 py-2.5 text-base outline-none focus:border-blue-500"
+          className="flex-1 rounded-full border bg-white text-black placeholder-zinc-500 border-zinc-300 px-5 py-2.5 text-base outline-none focus:border-blue-500"
         />
         <button
           type="submit"

@@ -83,6 +83,7 @@ export default function ChatScreen() {
           <TextInput
             style={styles.input}
             placeholder="Your Name"
+            placeholderTextColor="#666"
             value={username}
             onChangeText={setUsername}
             autoCapitalize="none"
@@ -90,6 +91,7 @@ export default function ChatScreen() {
           <TextInput
             style={styles.input}
             placeholder="Secret Password"
+            placeholderTextColor="#666"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -142,6 +144,7 @@ export default function ChatScreen() {
           <TextInput
             style={styles.chatInput}
             placeholder="Type a message..."
+            placeholderTextColor="#666"
             value={inputText}
             onChangeText={setInputText}
           />
@@ -163,7 +166,7 @@ const styles = StyleSheet.create({
   card: { width: '80%', padding: 20, backgroundColor: 'white', borderRadius: 15, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10, elevation: 5 },
   title: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 20, color: '#000' },
   errorText: { color: 'red', textAlign: 'center', marginBottom: 10, fontWeight: 'bold' },
-  input: { borderWidth: 1, borderColor: '#ccc', padding: 12, borderRadius: 8, marginBottom: 15, fontSize: 16, color: '#000' },
+  input: { borderWidth: 1, borderColor: '#ccc', backgroundColor: '#fff', padding: 12, borderRadius: 8, marginBottom: 15, fontSize: 16, color: '#000' },
   button: { backgroundColor: '#2563eb', padding: 15, borderRadius: 8, alignItems: 'center' },
   buttonText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
 
@@ -185,7 +188,7 @@ const styles = StyleSheet.create({
   textThem: { color: 'black', fontSize: 16 },
 
   inputRow: { flexDirection: 'row', padding: 10, backgroundColor: 'white', borderTopWidth: 1, borderColor: '#eee' },
-  chatInput: { flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 25, paddingHorizontal: 15, paddingVertical: 10, fontSize: 16, marginRight: 10, color: '#000' },
+  chatInput: { flex: 1, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fff', borderRadius: 25, paddingHorizontal: 15, paddingVertical: 10, fontSize: 16, marginRight: 10, color: '#000' },
   sendButton: { backgroundColor: '#2563eb', justifyContent: 'center', paddingHorizontal: 20, borderRadius: 25 },
   sendButtonDisabled: { opacity: 0.5 }
 });
