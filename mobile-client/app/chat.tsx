@@ -33,7 +33,7 @@ export default function ChatScreen() {
   const [activeUsers, setActiveUsers] = useState<string[]>([]);
   const [readReceipts, setReadReceipts] = useState<Record<string, string[]>>({});
   const [isConnected, setIsConnected] = useState(false);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTypingRef = useRef(false);
 
   const flatListRef = useRef<FlatList>(null);
@@ -224,15 +224,20 @@ export default function ChatScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       <View style={styles.header}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Text style={styles.headerTitle}>Friend Group Chat</Text>
-          <View style={{
-            width: 10,
-            height: 10,
-            borderRadius: 5,
-            backgroundColor: isConnected ? '#22c55e' : '#ef4444',
-            marginLeft: 10,
-          }} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={styles.headerTitle}>Friend Group Chat</Text>
+            <View style={{
+              width: 10,
+              height: 10,
+              borderRadius: 5,
+              backgroundColor: isConnected ? '#22c55e' : '#ef4444',
+              marginLeft: 10,
+            }} />
+          </View>
+          <Text style={styles.versionTextHeader}>
+            v{(Constants.manifest as any)?.version || '1.0.0'}
+          </Text>
         </View>
         <Text style={styles.headerSub}>Chatting as {username}</Text>
       </View>
@@ -319,6 +324,7 @@ const styles = StyleSheet.create({
   flex1: { flex: 1 },
   header: { padding: 15, backgroundColor: 'white', borderBottomWidth: 1, borderColor: '#eee' },
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#000' },
+  versionTextHeader: { color: '#9ca3af', fontSize: 12 },
   headerSub: { fontSize: 14, color: '#555' },
   activeUsersContainer: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 15, paddingTop: 5, backgroundColor: 'white' },
   activeUserChip: { backgroundColor: '#dcfce7', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginRight: 6, marginBottom: 6 },
