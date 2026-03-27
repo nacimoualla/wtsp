@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 
 // Use environment variable for backend URL, fallback to localhost for development
-const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:4000";
+const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://159.65.200.145:4000";
 
 const socket = io(SERVER_URL, {
   autoConnect: false,
