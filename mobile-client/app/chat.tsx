@@ -161,17 +161,17 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   lobbyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f3f4f6' },
   card: { width: '80%', padding: 20, backgroundColor: 'white', borderRadius: 15, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10, elevation: 5 },
-  title: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 20 },
+  title: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 20, color: '#000' },
   errorText: { color: 'red', textAlign: 'center', marginBottom: 10, fontWeight: 'bold' },
-  input: { borderWidth: 1, borderColor: '#ccc', padding: 12, borderRadius: 8, marginBottom: 15, fontSize: 16 },
+  input: { borderWidth: 1, borderColor: '#ccc', padding: 12, borderRadius: 8, marginBottom: 15, fontSize: 16, color: '#000' },
   button: { backgroundColor: '#2563eb', padding: 15, borderRadius: 8, alignItems: 'center' },
   buttonText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
 
   chatContainer: { flex: 1, backgroundColor: '#f9fafb' },
   flex1: { flex: 1 },
   header: { padding: 15, backgroundColor: 'white', borderBottomWidth: 1, borderColor: '#eee' },
-  headerTitle: { fontSize: 18, fontWeight: 'bold' },
-  headerSub: { fontSize: 14, color: 'gray' },
+  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#000' },
+  headerSub: { fontSize: 14, color: '#555' },
 
   listContent: { padding: 15, paddingBottom: 20 },
   messageWrapper: { marginBottom: 15, maxWidth: '80%' },
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
   textThem: { color: 'black', fontSize: 16 },
 
   inputRow: { flexDirection: 'row', padding: 10, backgroundColor: 'white', borderTopWidth: 1, borderColor: '#eee' },
-  chatInput: { flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 25, paddingHorizontal: 15, paddingVertical: 10, fontSize: 16, marginRight: 10 },
+  chatInput: { flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 25, paddingHorizontal: 15, paddingVertical: 10, fontSize: 16, marginRight: 10, color: '#000' },
   sendButton: { backgroundColor: '#2563eb', justifyContent: 'center', paddingHorizontal: 20, borderRadius: 25 },
   sendButtonDisabled: { opacity: 0.5 }
 });
