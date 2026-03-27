@@ -3,6 +3,7 @@ import {
   StyleSheet, Text, View, TextInput, TouchableOpacity,
   FlatList, KeyboardAvoidingView, Platform, SafeAreaView
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { io } from 'socket.io-client';
 import { Stack } from 'expo-router';
 import { registerForPushNotificationsAsync, showLocalNotification } from '../utils/notifications';
@@ -33,6 +34,7 @@ export default function ChatScreen() {
   const isTypingRef = useRef(false);
 
   const flatListRef = useRef<FlatList>(null);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (!isJoined) return;
@@ -225,7 +227,7 @@ export default function ChatScreen() {
 
       <KeyboardAvoidingView
         style={styles.flex1}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior="padding"
       >
         <FlatList
           ref={flatListRef}
@@ -236,7 +238,7 @@ export default function ChatScreen() {
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
         />
 
-        <View style={styles.inputRow}>
+        <View style={[styles.inputRow, { paddingBottom: insets.bottom + (Platform.OS === 'android' ? 48 : 0) + 10 }]}>
           <TextInput
             style={styles.chatInput}
             placeholder="Type a message..."
