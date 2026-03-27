@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { io } from 'socket.io-client';
 import { Stack } from 'expo-router';
 import { registerForPushNotificationsAsync, showLocalNotification } from '../utils/notifications';
+import Constants from 'expo-constants';
 
 // ⚠️ CRITICAL MOBILE GOTCHA:
 // You cannot use "localhost" on a mobile device because the phone looks for a server
@@ -197,6 +198,9 @@ export default function ChatScreen() {
           <TouchableOpacity style={styles.button} onPress={handleJoin}>
             <Text style={styles.buttonText}>Enter Room</Text>
           </TouchableOpacity>
+          <Text style={styles.versionText}>
+            Version {(Constants.manifest as any)?.version || '1.0.0'}
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -309,6 +313,7 @@ const styles = StyleSheet.create({
   input: { borderWidth: 1, borderColor: '#ccc', backgroundColor: '#fff', padding: 12, borderRadius: 8, marginBottom: 15, fontSize: 16, color: '#000' },
   button: { backgroundColor: '#2563eb', padding: 15, borderRadius: 8, alignItems: 'center' },
   buttonText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
+  versionText: { color: '#6b7280', fontSize: 12, textAlign: 'center', marginTop: 20 },
 
   chatContainer: { flex: 1, backgroundColor: '#f9fafb' },
   flex1: { flex: 1 },
