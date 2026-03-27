@@ -30,6 +30,24 @@ io.on('connection', (socket) => {
   const ROOM_ID = "friend_group_chat";
   const REDIS_ROOM_KEY = `chat:${ROOM_ID}`;
 
+  // Typing indicator: map socket id to { username, timeout }
+  const typingUsers = new Map<string, { username: string, timeout: ReturnType<typeof setTimeout> }>();
+
+  // Helper to broadcast typing status to others in the room
+  const broadcastTyping = (username: string, isTyping: boolean) => {
+    socket.to(ROOM_ID).emit("typing", { username, isTyping });
+  };
+
+  // Helper to clear typing for a socket
+  const clearTyping = (socketId: string) => {
+    const typingData = typingUsers.get(socketId);
+    if (typingData) {
+      clearTimeout(typingData.timeout);
+      typingUsers.delete(socketId);
+      broadcastTyping(typingData.username, false);
+    }
+  };
+
   // EVENT A: User Joins
   socket.on("join_chat", async () => {
     socket.join(ROOM_ID);
@@ -51,6 +69,9 @@ io.on('connection', (socket) => {
 
   // EVENT B: User Sends a Message
   socket.on("send_message", async (messageData) => {
+    // Clear typing for this user when they send a message
+    clearTyping(socket.id);
+    
     // 1. Turn the JavaScript object into a string for Redis
     const messageString = JSON.stringify(messageData);
 
@@ -64,8 +85,30 @@ io.on('connection', (socket) => {
     socket.to(ROOM_ID).emit("new_message", messageData);
   });
 
+  // EVENT D: User starts typing
+  socket.on("typing_start", (username: string) => {
+    // Clear existing timeout for this socket
+    const existing = typingUsers.get(socket.id);
+    if (existing) {
+      clearTimeout(existing.timeout);
+    }
+    // Set a new timeout to automatically stop typing after 3 seconds
+    const timeout = setTimeout(() => {
+      clearTyping(socket.id);
+    }, 3000);
+    typingUsers.set(socket.id, { username, timeout });
+    broadcastTyping(username, true);
+  });
+
+  // EVENT E: User stops typing (optional, can be triggered by blur or manual stop)
+  socket.on("typing_stop", (username: string) => {
+    clearTyping(socket.id);
+  });
+
   // EVENT C: User Disconnects
   socket.on('disconnect', () => {
+    // Clear typing for this user
+    clearTyping(socket.id);
     console.log(`🔴 User disconnected: ${socket.id}`);
   });
 });

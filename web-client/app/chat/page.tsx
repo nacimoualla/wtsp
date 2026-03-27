@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { io } from "socket.io-client";
 
 // Use proxy on Vercel to avoid Mixed Content error, fallback to direct IP locally
@@ -27,8 +27,71 @@ export default function ChatPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isJoined, setIsJoined] = useState(false);
+  const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default");
 
   const bottomRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isTypingRef = useRef(false);
+
+  // Emit typing start/stop with debounce
+  const emitTyping = useCallback((typing: boolean) => {
+    if (!username) return;
+    if (typing) {
+      if (!isTypingRef.current) {
+        socket.emit("typing_start", username);
+        isTypingRef.current = true;
+      }
+      // Clear previous timeout
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      // Set new timeout to stop typing after 1.5 seconds of inactivity
+      typingTimeoutRef.current = setTimeout(() => {
+        socket.emit("typing_stop", username);
+        isTypingRef.current = false;
+      }, 1500);
+    } else {
+      // Immediate stop
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      socket.emit("typing_stop", username);
+      isTypingRef.current = false;
+    }
+  }, [username]);
+
+  // Request notification permission when joined
+  useEffect(() => {
+    if (!isJoined) return;
+    if (!("Notification" in window)) {
+      console.warn("This browser does not support notifications");
+      return;
+    }
+    if (Notification.permission === "granted") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setNotificationPermission(prev => prev === "granted" ? prev : "granted");
+    } else if (Notification.permission !== "denied") {
+      Notification.requestPermission().then((permission) => {
+        setNotificationPermission(prev => prev === permission ? prev : permission);
+      });
+    } else {
+      setNotificationPermission(prev => prev === Notification.permission ? prev : Notification.permission);
+    }
+  }, [isJoined]);
+
+  // Show notification for new messages when page is hidden
+  const showNotification = useCallback((msg: Message) => {
+    if (notificationPermission !== "granted") return;
+    if (document.visibilityState === "visible") return;
+    if (msg.sender === username) return;
+
+    const notification = new Notification(`${msg.sender}`, {
+      body: msg.text,
+      icon: "/favicon.ico",
+      tag: "new-message",
+    });
+    notification.onclick = () => {
+      window.focus();
+      notification.close();
+    };
+  }, [notificationPermission, username]);
 
   useEffect(() => {
     if (!isJoined) return;
@@ -37,20 +100,52 @@ export default function ChatPage() {
     socket.emit("join_chat");
 
     socket.on("chat_history", (history: Message[]) => setMessages(history));
-    socket.on("new_message", (msg: Message) =>
-      setMessages((prev) => [...prev, msg])
-    );
+    socket.on("new_message", (msg: Message) => {
+      setMessages((prev) => [...prev, msg]);
+      showNotification(msg);
+    });
+
+    // Listen for typing events from server
+    socket.on("typing", ({ username: typingUser, isTyping }: { username: string; isTyping: boolean }) => {
+      setTypingUsers(prev => {
+        const newSet = new Set(prev);
+        if (isTyping) {
+          newSet.add(typingUser);
+          // Auto-remove after 3 seconds (server timeout is 3 seconds)
+          setTimeout(() => {
+            setTypingUsers(current => {
+              const updated = new Set(current);
+              updated.delete(typingUser);
+              return updated;
+            });
+          }, 3000);
+        } else {
+          newSet.delete(typingUser);
+        }
+        return newSet;
+      });
+    });
 
     return () => {
       socket.off("chat_history");
       socket.off("new_message");
+      socket.off("typing");
       socket.disconnect();
     };
-  }, [isJoined]);
+  }, [isJoined, showNotification]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Emit typing stop when component unmounts or user leaves
+  useEffect(() => {
+    return () => {
+      if (isTypingRef.current) {
+        socket.emit("typing_stop", username);
+      }
+    };
+  }, [username]);
 
   const handleJoin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,6 +165,9 @@ export default function ChatPage() {
     e.preventDefault();
     if (!inputText.trim()) return;
 
+    // Stop typing when sending a message
+    emitTyping(false);
+
     const newMessage: Message = {
       sender: username,
       text: inputText,
@@ -79,6 +177,17 @@ export default function ChatPage() {
     socket.emit("send_message", newMessage);
     setMessages((prev) => [...prev, newMessage]);
     setInputText("");
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const text = e.target.value;
+    setInputText(text);
+    // Emit typing start when there's text, stop when empty
+    if (text.trim()) {
+      emitTyping(true);
+    } else {
+      emitTyping(false);
+    }
   };
 
   // LOBBY
@@ -162,6 +271,21 @@ export default function ChatPage() {
             </div>
           );
         })}
+        {/* Typing indicator */}
+        {typingUsers.size > 0 && (
+          <div className="mb-4 flex justify-start">
+            <div className="max-w-md">
+              <p className="mb-1 ml-1 text-xs text-black">
+                {Array.from(typingUsers).join(", ")} {typingUsers.size === 1 ? "is" : "are"} typing
+              </p>
+              <div className="flex space-x-1 rounded-2xl rounded-bl-sm bg-zinc-200 px-4 py-3">
+                <div className="typing-dot h-2 w-2 rounded-full bg-zinc-500"></div>
+                <div className="typing-dot h-2 w-2 rounded-full bg-zinc-500"></div>
+                <div className="typing-dot h-2 w-2 rounded-full bg-zinc-500"></div>
+              </div>
+            </div>
+          </div>
+        )}
         <div ref={bottomRef} />
       </div>
 
@@ -174,7 +298,7 @@ export default function ChatPage() {
           type="text"
           placeholder="Type a message..."
           value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
+          onChange={handleInputChange}
           className="flex-1 rounded-full border bg-white text-black placeholder-zinc-500 border-zinc-300 px-5 py-2.5 text-base outline-none focus:border-blue-500"
         />
         <button
