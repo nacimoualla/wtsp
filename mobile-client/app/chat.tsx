@@ -21,6 +21,7 @@ const socket = io(SERVER_URL, {
 const SECRET_PASSWORD = "bzizila";
 
 export default function ChatScreen() {
+  console.log('ChatScreen rendered, SERVER_URL:', SERVER_URL);
   const [messages, setMessages] = useState<any[]>([]);
   const [inputText, setInputText] = useState("");
   const [username, setUsername] = useState("");
@@ -36,6 +37,7 @@ export default function ChatScreen() {
 
   const flatListRef = useRef<FlatList>(null);
   const insets = useSafeAreaInsets();
+  console.log('Safe area insets:', insets);
 
   useEffect(() => {
     if (!isJoined) return;
@@ -65,8 +67,12 @@ export default function ChatScreen() {
     });
     socket.emit("join_chat", username);
 
-    socket.on("chat_history", (history: any[]) => setMessages(history));
+    socket.on("chat_history", (history: any[]) => {
+      console.log('Received chat history:', history.length, 'messages');
+      setMessages(history);
+    });
     socket.on("new_message", (msg: any) => {
+      console.log('New message received:', msg);
       setMessages((prev) => [...prev, msg]);
       // Show local notification if the message is from another user
       if (msg.sender !== username) {
