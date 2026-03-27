@@ -328,8 +328,8 @@ export default function ChatPage() {
         })}
         {/* Typing indicator */}
         {typingUsers.size > 0 && (
-          <div className="mb-4 flex justify-start">
-            <div className="max-w-md">
+          <div className="mb-2 flex justify-start">
+              <div className="max-w-md -mt-1">
               <p className="mb-1 ml-1 text-xs text-black">
                 {Array.from(typingUsers).join(", ")} {typingUsers.size === 1 ? "is" : "are"} typing
               </p>
