@@ -12,7 +12,7 @@ import { registerForPushNotificationsAsync, showLocalNotification } from '../uti
 // You cannot use "localhost" on a mobile device because the phone looks for a server
 // running inside the phone itself! Use your server's public IP address.
 // Example: "http://159.65.200.145:4000"
-const SERVER_URL = "http://159.65.200.145:4000";
+const SERVER_URL = "http://159.65.200.145:4000"; // Ensure this server is running and accessible from your device.
 
 const socket = io(SERVER_URL, {
   autoConnect: false
@@ -30,6 +30,7 @@ export default function ChatScreen() {
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const [activeUsers, setActiveUsers] = useState<string[]>([]);
   const [readReceipts, setReadReceipts] = useState<Record<string, string[]>>({});
+  const [isConnected, setIsConnected] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isTypingRef = useRef(false);
 
@@ -40,6 +41,22 @@ export default function ChatScreen() {
     if (!isJoined) return;
 
     socket.connect();
+
+    socket.on('connect', () => {
+      console.log('Socket connected');
+      setIsConnected(true);
+    });
+
+    socket.on('disconnect', () => {
+      console.log('Socket disconnected');
+      setIsConnected(false);
+    });
+
+    socket.on('connect_error', (error) => {
+      console.log('Socket connection error:', error);
+      setIsConnected(false);
+    });
+
     // Register for push notifications
     registerForPushNotificationsAsync().then(token => {
       if (token) {
@@ -85,6 +102,9 @@ export default function ChatScreen() {
     });
 
     return () => {
+      socket.off('connect');
+      socket.off('disconnect');
+      socket.off('connect_error');
       socket.off("chat_history");
       socket.off("new_message");
       socket.off("typing");
@@ -194,7 +214,16 @@ export default function ChatScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Friend Group Chat</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Text style={styles.headerTitle}>Friend Group Chat</Text>
+          <View style={{
+            width: 10,
+            height: 10,
+            borderRadius: 5,
+            backgroundColor: isConnected ? '#22c55e' : '#ef4444',
+            marginLeft: 10,
+          }} />
+        </View>
         <Text style={styles.headerSub}>Chatting as {username}</Text>
       </View>
 
