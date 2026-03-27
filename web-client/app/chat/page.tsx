@@ -3,11 +3,13 @@
 import { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 
-// Use environment variable for backend URL, fallback to localhost for development
-const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://159.65.200.145:4000";
+// Use proxy on Vercel to avoid Mixed Content error, fallback to direct IP locally
+const SERVER_URL = process.env.NODE_ENV === "production" ? "" : (process.env.NEXT_PUBLIC_SERVER_URL || "http://159.65.200.145:4000");
 
 const socket = io(SERVER_URL, {
   autoConnect: false,
+  path: "/socket.io",
+  transports: ["polling"],
 });
 
 const SECRET_PASSWORD = "bzizila";
