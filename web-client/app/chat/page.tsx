@@ -14,6 +14,8 @@ const socket = io(SERVER_URL, {
 
 const SECRET_PASSWORD = "bzizila";
 
+const getMessageKey = (message: { timestamp: number; sender: string }) => `${message.timestamp}_${message.sender}`;
+
 interface Message {
   sender: string;
   text: string;
@@ -29,10 +31,12 @@ export default function ChatPage() {
   const [isJoined, setIsJoined] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const [activeUsers, setActiveUsers] = useState<string[]>([]);
+  const [readReceipts, setReadReceipts] = useState<Record<string, string[]>>({});
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default");
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const readMessagesSent = useRef<Set<string>>(new Set());
   const isTypingRef = useRef(false);
 
   // Emit typing start/stop with debounce
@@ -57,6 +61,15 @@ export default function ChatPage() {
       isTypingRef.current = false;
     }
   }, [username]);
+
+  // Emit messages read for given messages
+  const emitMessagesRead = useCallback((messages: Message[]) => {
+    const keys = messages.map(msg => getMessageKey(msg)).filter(key => !readMessagesSent.current.has(key));
+    if (keys.length > 0) {
+      keys.forEach(key => readMessagesSent.current.add(key));
+      socket.emit("messages_read", keys);
+    }
+  }, []);
 
   // Request notification permission when joined
   useEffect(() => {
@@ -100,10 +113,16 @@ export default function ChatPage() {
     socket.connect();
     socket.emit("join_chat", username);
 
-    socket.on("chat_history", (history: Message[]) => setMessages(history));
+    socket.on("chat_history", (history: Message[]) => {
+      setMessages(history);
+      emitMessagesRead(history);
+    });
     socket.on("new_message", (msg: Message) => {
       setMessages((prev) => [...prev, msg]);
       showNotification(msg);
+      if (document.visibilityState === "visible") {
+        emitMessagesRead([msg]);
+      }
     });
 
     // Listen for typing events from server
@@ -132,14 +151,20 @@ export default function ChatPage() {
       setActiveUsers(users);
     });
 
+    // Listen for read receipts updates
+    socket.on("read_receipts_update", (updates: Record<string, string[]>) => {
+      setReadReceipts(prev => ({ ...prev, ...updates }));
+    });
+
     return () => {
       socket.off("chat_history");
       socket.off("new_message");
       socket.off("typing");
       socket.off("users_update");
+      socket.off("read_receipts_update");
       socket.disconnect();
     };
-  }, [isJoined, showNotification, username]);
+  }, [isJoined, showNotification, username, emitMessagesRead]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -263,6 +288,9 @@ export default function ChatPage() {
       <div className="flex-1 overflow-y-auto px-6 py-4">
         {messages.map((msg, i) => {
           const isMe = msg.sender === username;
+          const messageKey = getMessageKey(msg);
+          const readers = readReceipts[messageKey] || [];
+          const otherReaders = readers.filter(r => r !== msg.sender);
           return (
             <div
               key={i}
@@ -282,6 +310,17 @@ export default function ChatPage() {
                   }`}
                 >
                   <p className="text-base text-inherit">{msg.text}</p>
+                  {otherReaders.length > 0 && (
+                    <div className={`mt-1 flex items-center gap-1 ${isMe ? "justify-end" : "justify-start"}`}>
+                      <svg className="h-3 w-3 text-current opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      <span className="text-xs opacity-60">
+                        {otherReaders.length === 1 ? otherReaders[0] : `${otherReaders.length}`}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

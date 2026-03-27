@@ -31,9 +31,13 @@ io.on('connection', (socket) => {
   const REDIS_ROOM_KEY = `chat:${ROOM_ID}`;
 
   // Typing indicator: map socket id to { username, timeout }
-  const typingUsers = new Map<string, { username: string, timeout: ReturnType<typeof setTimeout> }>();
+  const typingUsers = new Map<string, { username: string; timeout: ReturnType<typeof setTimeout> }>();
   // Active users: map socket id to username
   const activeUsers = new Map<string, string>();
+  // Read receipts: map message key (timestamp_sender) -> Set of usernames who have read it
+  const messageReadReceipts = new Map<string, Set<string>>();
+  // Helper to generate message key
+  const getMessageKey = (message: { timestamp: number; sender: string }) => `${message.timestamp}_${message.sender}`;
 
   // Helper to broadcast typing status to others in the room
   const broadcastTyping = (username: string, isTyping: boolean) => {
@@ -43,6 +47,32 @@ io.on('connection', (socket) => {
   const broadcastActiveUsers = () => {
     const users = Array.from(activeUsers.values());
     io.to(ROOM_ID).emit("users_update", users);
+  };
+  // Helper to broadcast read receipts for given message keys
+  const broadcastReadReceipts = (messageKeys: string[]) => {
+    const updates: Record<string, string[]> = {};
+    for (const key of messageKeys) {
+      const readers = messageReadReceipts.get(key);
+      if (readers) {
+        updates[key] = Array.from(readers);
+      }
+    }
+    if (Object.keys(updates).length > 0) {
+      io.to(ROOM_ID).emit("read_receipts_update", updates);
+    }
+  };
+  // Helper to emit read receipts to a specific socket
+  const emitReadReceiptsToSocket = (targetSocket: typeof socket, messageKeys: string[]) => {
+    const updates: Record<string, string[]> = {};
+    for (const key of messageKeys) {
+      const readers = messageReadReceipts.get(key);
+      if (readers) {
+        updates[key] = Array.from(readers);
+      }
+    }
+    if (Object.keys(updates).length > 0) {
+      targetSocket.emit("read_receipts_update", updates);
+    }
   };
 
   // Helper to clear typing for a socket
@@ -76,6 +106,10 @@ io.on('connection', (socket) => {
     
     // Send the correctly ordered history only to the user who just joined
     socket.emit("chat_history", parsedHistory);
+    
+    // Send read receipts for these messages
+    const messageKeys = parsedHistory.map(msg => getMessageKey(msg));
+    emitReadReceiptsToSocket(socket, messageKeys);
   });
 
   // EVENT B: User Sends a Message
@@ -97,7 +131,13 @@ io.on('connection', (socket) => {
     // 3. Trim the list so it never grows larger than 100 messages
     await redisClient.lTrim(REDIS_ROOM_KEY, 0, 99);
 
-    // 4. Broadcast the message to everyone ELSE currently in the room
+    // 4. Initialize read receipts for this message (empty set)
+    const messageKey = getMessageKey(messageData);
+    if (!messageReadReceipts.has(messageKey)) {
+      messageReadReceipts.set(messageKey, new Set());
+    }
+
+    // 5. Broadcast the message to everyone ELSE currently in the room
     socket.to(ROOM_ID).emit("new_message", messageData);
   });
 
@@ -124,6 +164,28 @@ io.on('connection', (socket) => {
   // EVENT E: User stops typing (optional, can be triggered by blur or manual stop)
   socket.on("typing_stop", (username: string) => {
     clearTyping(socket.id);
+  });
+
+  // EVENT F: User marks messages as read
+  socket.on("messages_read", (messageKeys: string[]) => {
+    // Get username from activeUsers map
+    const username = activeUsers.get(socket.id);
+    if (!username) return;
+    const changedKeys: string[] = [];
+    for (const key of messageKeys) {
+      let readers = messageReadReceipts.get(key);
+      if (!readers) {
+        readers = new Set();
+        messageReadReceipts.set(key, readers);
+      }
+      if (!readers.has(username)) {
+        readers.add(username);
+        changedKeys.push(key);
+      }
+    }
+    if (changedKeys.length > 0) {
+      broadcastReadReceipts(changedKeys);
+    }
   });
 
   // EVENT C: User Disconnects
