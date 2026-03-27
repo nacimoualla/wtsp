@@ -8,9 +8,9 @@ import { Stack } from 'expo-router';
 
 // ⚠️ CRITICAL MOBILE GOTCHA:
 // You cannot use "localhost" on a mobile device because the phone looks for a server
-// running inside the phone itself! You must use your computer's actual local WiFi IP address.
-// Example: "http://192.168.1.45:4000" (Find this in your computer's network settings)
-const SERVER_URL = "http://192.168.0.137";
+// running inside the phone itself! Use your server's public IP address.
+// Example: "http://159.65.200.145:4000"
+const SERVER_URL = "http://159.65.200.145:4000";
 
 const socket = io(SERVER_URL, {
   autoConnect: false
