@@ -32,10 +32,17 @@ io.on('connection', (socket) => {
 
   // Typing indicator: map socket id to { username, timeout }
   const typingUsers = new Map<string, { username: string, timeout: ReturnType<typeof setTimeout> }>();
+  // Active users: map socket id to username
+  const activeUsers = new Map<string, string>();
 
   // Helper to broadcast typing status to others in the room
   const broadcastTyping = (username: string, isTyping: boolean) => {
     socket.to(ROOM_ID).emit("typing", { username, isTyping });
+  };
+  // Helper to broadcast active users to the room
+  const broadcastActiveUsers = () => {
+    const users = Array.from(activeUsers.values());
+    io.to(ROOM_ID).emit("users_update", users);
   };
 
   // Helper to clear typing for a socket
@@ -49,8 +56,12 @@ io.on('connection', (socket) => {
   };
 
   // EVENT A: User Joins
-  socket.on("join_chat", async () => {
+  socket.on("join_chat", async (username: string) => {
     socket.join(ROOM_ID);
+    // Store user in active users map
+    activeUsers.set(socket.id, username);
+    // Broadcast updated user list to the room
+    broadcastActiveUsers();
     
     // Fetch the last 100 messages from Redis
     const rawHistory = await redisClient.lRange(REDIS_ROOM_KEY, 0, 99);
@@ -69,6 +80,11 @@ io.on('connection', (socket) => {
 
   // EVENT B: User Sends a Message
   socket.on("send_message", async (messageData) => {
+    // Ensure user is in active users map (fallback if join_chat not called)
+    if (!activeUsers.has(socket.id)) {
+      activeUsers.set(socket.id, messageData.sender);
+      broadcastActiveUsers();
+    }
     // Clear typing for this user when they send a message
     clearTyping(socket.id);
     
@@ -87,6 +103,11 @@ io.on('connection', (socket) => {
 
   // EVENT D: User starts typing
   socket.on("typing_start", (username: string) => {
+    // Ensure user is in active users map (fallback if join_chat not called)
+    if (!activeUsers.has(socket.id)) {
+      activeUsers.set(socket.id, username);
+      broadcastActiveUsers();
+    }
     // Clear existing timeout for this socket
     const existing = typingUsers.get(socket.id);
     if (existing) {
@@ -109,6 +130,9 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     // Clear typing for this user
     clearTyping(socket.id);
+    // Remove from active users
+    activeUsers.delete(socket.id);
+    broadcastActiveUsers();
     console.log(`🔴 User disconnected: ${socket.id}`);
   });
 });

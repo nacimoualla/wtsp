@@ -28,6 +28,7 @@ export default function ChatPage() {
   const [error, setError] = useState("");
   const [isJoined, setIsJoined] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+  const [activeUsers, setActiveUsers] = useState<string[]>([]);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default");
 
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -97,7 +98,7 @@ export default function ChatPage() {
     if (!isJoined) return;
 
     socket.connect();
-    socket.emit("join_chat");
+    socket.emit("join_chat", username);
 
     socket.on("chat_history", (history: Message[]) => setMessages(history));
     socket.on("new_message", (msg: Message) => {
@@ -126,13 +127,19 @@ export default function ChatPage() {
       });
     });
 
+    // Listen for active users updates
+    socket.on("users_update", (users: string[]) => {
+      setActiveUsers(users);
+    });
+
     return () => {
       socket.off("chat_history");
       socket.off("new_message");
       socket.off("typing");
+      socket.off("users_update");
       socket.disconnect();
     };
-  }, [isJoined, showNotification]);
+  }, [isJoined, showNotification, username]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -241,6 +248,15 @@ export default function ChatPage() {
       <div className="border-b border-zinc-200 bg-white px-6 py-4">
         <h1 className="text-lg font-bold text-black">Friend Group Chat</h1>
         <p className="text-sm text-black">Chatting as {username}</p>
+        {activeUsers.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {activeUsers.map(user => (
+              <span key={user} className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                {user}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Messages */}
