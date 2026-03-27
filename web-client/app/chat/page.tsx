@@ -87,7 +87,7 @@ export default function ChatPage() {
           onSubmit={handleJoin}
           className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-lg"
         >
-          <h1 className="mb-6 text-center text-2xl font-bold">
+          <h1 className="mb-6 text-center text-2xl font-bold text-black">
             Secret Group Chat
           </h1>
 
@@ -102,14 +102,14 @@ export default function ChatPage() {
             placeholder="Your Name"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="mb-4 w-full rounded-lg border border-zinc-300 px-4 py-3 text-lg outline-none focus:border-blue-500"
+            className="mb-4 w-full rounded-lg border text-black border-zinc-300 px-4 py-3 text-lg outline-none focus:border-blue-500"
           />
           <input
             type="password"
             placeholder="Secret Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mb-6 w-full rounded-lg border border-zinc-300 px-4 py-3 text-lg outline-none focus:border-blue-500"
+            className="mb-6 w-full rounded-lg border text-black border-zinc-300 px-4 py-3 text-lg outline-none focus:border-blue-500"
           />
 
           <button
@@ -128,8 +128,8 @@ export default function ChatPage() {
     <div className="flex h-screen flex-col bg-zinc-50">
       {/* Header */}
       <div className="border-b border-zinc-200 bg-white px-6 py-4">
-        <h1 className="text-lg font-bold">Friend Group Chat</h1>
-        <p className="text-sm text-zinc-500">Chatting as {username}</p>
+        <h1 className="text-lg font-bold text-black">Friend Group Chat</h1>
+        <p className="text-sm text-black">Chatting as {username}</p>
       </div>
 
       {/* Messages */}
@@ -143,7 +143,7 @@ export default function ChatPage() {
             >
               <div className={`max-w-md ${isMe ? "order-2" : ""}`}>
                 {!isMe && (
-                  <p className="mb-1 ml-1 text-xs text-zinc-500">
+                  <p className="mb-1 ml-1 text-xs text-black">
                     {msg.sender}
                   </p>
                 )}
@@ -154,7 +154,7 @@ export default function ChatPage() {
                       : "rounded-bl-sm bg-zinc-200 text-black"
                   }`}
                 >
-                  <p className="text-base">{msg.text}</p>
+                  <p className="text-base text-inherit">{msg.text}</p>
                 </div>
               </div>
             </div>
