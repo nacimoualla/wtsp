@@ -2,6 +2,7 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import redisClient, { connectRedis } from './redisClient.js';
+import { Expo } from 'expo-server-sdk';
 
 const app = express();
 const httpServer = createServer(app);
@@ -34,6 +35,8 @@ io.on('connection', (socket) => {
   const typingUsers = new Map<string, { username: string; timeout: ReturnType<typeof setTimeout> }>();
   // Active users: map socket id to username
   const activeUsers = new Map<string, string>();
+  // Push tokens: map username to Expo push token
+  const pushTokens = new Map<string, string>();
   // Read receipts: map message key (timestamp_sender) -> Set of usernames who have read it
   const messageReadReceipts = new Map<string, Set<string>>();
   // Helper to generate message key
@@ -47,6 +50,32 @@ io.on('connection', (socket) => {
   const broadcastActiveUsers = () => {
     const users = Array.from(activeUsers.values());
     io.to(ROOM_ID).emit("users_update", users);
+  };
+  
+  // Expo SDK for push notifications
+  const expo = new Expo();
+
+  // Helper to send push notification to a user
+  const sendPushNotificationToUser = async (username: string, title: string, body: string, data?: any) => {
+    const token = pushTokens.get(username);
+    if (!token) return;
+    if (!Expo.isExpoPushToken(token)) {
+      console.error(`Push token ${token} is not a valid Expo push token`);
+      return;
+    }
+    try {
+      await expo.sendPushNotificationsAsync([
+        {
+          to: token,
+          title,
+          body,
+          data,
+          sound: 'default',
+        },
+      ]);
+    } catch (error) {
+      console.error('Error sending push notification:', error);
+    }
   };
   // Helper to broadcast read receipts for given message keys
   const broadcastReadReceipts = (messageKeys: string[]) => {
@@ -137,7 +166,20 @@ io.on('connection', (socket) => {
       messageReadReceipts.set(messageKey, new Set());
     }
 
-    // 5. Broadcast the message to everyone ELSE currently in the room
+    // 5. Send push notifications to other active users
+    const sender = messageData.sender;
+    for (const [socketId, username] of activeUsers.entries()) {
+      if (username !== sender) {
+        sendPushNotificationToUser(
+          username,
+          `New message from ${sender}`,
+          messageData.text,
+          { type: 'new_message', sender, timestamp: messageData.timestamp }
+        );
+      }
+    }
+
+    // 6. Broadcast the message to everyone ELSE currently in the room
     socket.to(ROOM_ID).emit("new_message", messageData);
   });
 
@@ -166,6 +208,15 @@ io.on('connection', (socket) => {
     clearTyping(socket.id);
   });
 
+  // EVENT G: Register push token
+  socket.on("register_push_token", (token: string) => {
+    const username = activeUsers.get(socket.id);
+    if (username && Expo.isExpoPushToken(token)) {
+      pushTokens.set(username, token);
+      console.log(`Push token registered for ${username}`);
+    }
+  });
+
   // EVENT F: User marks messages as read
   socket.on("messages_read", (messageKeys: string[]) => {
     // Get username from activeUsers map
@@ -192,6 +243,11 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     // Clear typing for this user
     clearTyping(socket.id);
+    // Remove push token for this user
+    const username = activeUsers.get(socket.id);
+    if (username) {
+      pushTokens.delete(username);
+    }
     // Remove from active users
     activeUsers.delete(socket.id);
     broadcastActiveUsers();
