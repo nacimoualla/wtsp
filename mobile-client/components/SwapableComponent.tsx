@@ -30,6 +30,7 @@ const EMOJI_LIST = ['👍', '❤️', '😂', '😮', '😢'];
 const MessageItem = ({ message, currentUsername, onSwipeToReply, onToggleReaction, onPressReplyQuote, onDeleteMessage, highlighted, isDarkMode = false }: Props) => {
   const isMe = message.sender === currentUsername;
   const messageKey = `${message.timestamp}_${message.sender}`;
+  const [showReactions, setShowReactions] = useState(false);
 
   const bubbleSent = isDarkMode ? '#1e40af' : '#3b82f6';
   const bubbleReceived = isDarkMode ? '#333' : '#e5e7eb';
@@ -72,7 +73,7 @@ const MessageItem = ({ message, currentUsername, onSwipeToReply, onToggleReactio
   const renderReactions = () => {
     if (!message.reactions || Object.keys(message.reactions).length === 0) return null;
     return (
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 4, justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
+      <Animated.View entering={FadeIn.duration(300)} style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 4, justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
         {Object.entries(message.reactions).map(([emoji, count]) => (
           <TouchableOpacity
             key={emoji}
@@ -89,25 +90,28 @@ const MessageItem = ({ message, currentUsername, onSwipeToReply, onToggleReactio
             <Text style={{ fontSize: 12 }}>{emoji} {count}</Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </Animated.View>
     );
   };
 
-  // Quick reaction buttons (show on long press? For now, show always as small bar)
+  // Quick reaction buttons (appear on long press)
   const renderQuickReactions = () => {
-    // Only show if message is not from me? Or show for all
+    if (!showReactions) return null;
     return (
-      <View style={{ flexDirection: 'row', marginTop: 4, justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
+      <Animated.View entering={FadeIn.duration(300)} style={{ flexDirection: 'row', marginTop: 4, justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
         {EMOJI_LIST.slice(0, 3).map(emoji => (
           <TouchableOpacity
             key={emoji}
-            onPress={() => onToggleReaction(messageKey, emoji)}
+            onPress={() => {
+              onToggleReaction(messageKey, emoji);
+              setShowReactions(false);
+            }}
             style={{ paddingHorizontal: 4, paddingVertical: 2 }}
           >
             <Text style={{ fontSize: 14, opacity: 0.7 }}>{emoji}</Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </Animated.View>
     );
   };
 
@@ -131,44 +135,50 @@ const MessageItem = ({ message, currentUsername, onSwipeToReply, onToggleReactio
             {message.sender}
           </Text>
         )}
-        <View style={{
-          backgroundColor: highlighted ? '#fef08a' : (isMe ? bubbleSent : bubbleReceived),
-          padding: 12,
-          borderRadius: 20,
-          borderBottomRightRadius: isMe ? 4 : 20,
-          borderBottomLeftRadius: isMe ? 20 : 4,
-        }}>
-          {/* Reply quote */}
-          {message.replyTo && (
-            <TouchableOpacity
-              onPress={() => onPressReplyQuote?.(message.replyTo!.key)}
-              activeOpacity={0.7}
-            >
-              <View style={{
-                backgroundColor: isMe 
-                  ? (isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.15)')
-                  : (isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'),
-                borderLeftWidth: 3,
-                borderLeftColor: isMe 
-                  ? (isDarkMode ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.5)')
-                  : (isDarkMode ? '#60a5fa' : '#007AFF'),
-                padding: 8,
-                borderRadius: 4,
-                marginBottom: 4,
-              }}>
-                <Text style={{ fontWeight: 'bold', fontSize: 12, color: isMe ? (isDarkMode ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.9)') : (isDarkMode ? '#60a5fa' : '#007AFF'), marginBottom: 2 }}>
-                  {message.replyTo.sender}
-                </Text>
-                <Text style={{ fontSize: 13, color: isMe ? (isDarkMode ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.8)') : (isDarkMode ? '#ccc' : '#555') }} numberOfLines={2}>
-                  {message.replyTo.text}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          )}
-          <Text style={{ color: isMe ? textSent : textReceived, fontSize: 16 }}>
-            {message.text}
-          </Text>
-        </View>
+        <TouchableOpacity
+          onLongPress={() => setShowReactions(!showReactions)}
+          delayLongPress={500}
+          activeOpacity={1}
+        >
+          <View style={{
+            backgroundColor: highlighted ? '#fef08a' : (isMe ? bubbleSent : bubbleReceived),
+            padding: 12,
+            borderRadius: 20,
+            borderBottomRightRadius: isMe ? 4 : 20,
+            borderBottomLeftRadius: isMe ? 20 : 4,
+          }}>
+            {/* Reply quote */}
+            {message.replyTo && (
+              <TouchableOpacity
+                onPress={() => onPressReplyQuote?.(message.replyTo!.key)}
+                activeOpacity={0.7}
+              >
+                <View style={{
+                  backgroundColor: isMe 
+                    ? (isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.15)')
+                    : (isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'),
+                  borderLeftWidth: 3,
+                  borderLeftColor: isMe 
+                    ? (isDarkMode ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.5)')
+                    : (isDarkMode ? '#60a5fa' : '#007AFF'),
+                  padding: 8,
+                  borderRadius: 4,
+                  marginBottom: 4,
+                }}>
+                  <Text style={{ fontWeight: 'bold', fontSize: 12, color: isMe ? (isDarkMode ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.9)') : (isDarkMode ? '#60a5fa' : '#007AFF'), marginBottom: 2 }}>
+                    {message.replyTo.sender}
+                  </Text>
+                  <Text style={{ fontSize: 13, color: isMe ? (isDarkMode ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.8)') : (isDarkMode ? '#ccc' : '#555') }} numberOfLines={2}>
+                    {message.replyTo.text}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            )}
+            <Text style={{ color: isMe ? textSent : textReceived, fontSize: 16 }}>
+              {message.text}
+            </Text>
+          </View>
+        </TouchableOpacity>
         {/* Reactions */}
         {renderReactions()}
         {/* Quick reaction buttons */}

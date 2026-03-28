@@ -11,6 +11,10 @@ import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import SwapableComponent from '../../components/SwapableComponent';
 
+export const options = {
+  tabBarStyle: { display: 'none' },
+};
+
 
 // ⚠️ CRITICAL MOBILE GOTCHA:
 // You cannot use "localhost" on a mobile device because the phone looks for a server
@@ -203,24 +207,32 @@ export default function ChatScreen() {
   // 1. THE LOBBY
   if (!isJoined) {
     return (
-      <SafeAreaView style={styles.lobbyContainer}>
-        <View style={styles.card}>
-          <Text style={styles.title}>Secret Group Chat</Text>
+      <SafeAreaView style={[styles.lobbyContainer, { backgroundColor: isDarkMode ? '#121212' : '#f3f4f6' }]}>
+        <View style={[styles.card, { backgroundColor: isDarkMode ? '#1e1e1e' : 'white' }]}>
+          <Text style={[styles.title, { color: isDarkMode ? 'white' : 'black' }]}>Secret Group Chat</Text>
 
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
           <TextInput
-            style={styles.input}
+            style={[styles.input, { 
+              backgroundColor: isDarkMode ? '#2c2c2c' : 'white',
+              borderColor: isDarkMode ? '#444' : '#ccc',
+              color: isDarkMode ? 'white' : 'black'
+            }]}
             placeholder="Your Name"
-            placeholderTextColor="#666"
+            placeholderTextColor={isDarkMode ? '#aaa' : '#666'}
             value={username}
             onChangeText={setUsername}
             autoCapitalize="none"
           />
           <TextInput
-            style={styles.input}
+            style={[styles.input, { 
+              backgroundColor: isDarkMode ? '#2c2c2c' : 'white',
+              borderColor: isDarkMode ? '#444' : '#ccc',
+              color: isDarkMode ? 'white' : 'black'
+            }]}
             placeholder="Secret Password"
-            placeholderTextColor="#666"
+            placeholderTextColor={isDarkMode ? '#aaa' : '#666'}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -312,8 +324,8 @@ export default function ChatScreen() {
       {activeUsers.length > 0 && (
         <View style={styles.activeUsersContainer}>
           {activeUsers.map(user => (
-            <View key={user} style={styles.activeUserChip}>
-              <Text style={styles.activeUserText}>{user}</Text>
+            <View key={user} style={[styles.activeUserChip, { backgroundColor: isDarkMode ? '#333' : '#dcfce7' }]}>
+              <Text style={[styles.activeUserText, { color: isDarkMode ? '#aaa' : '#166534' }]}>{user}</Text>
             </View>
           ))}
         </View>
@@ -321,16 +333,16 @@ export default function ChatScreen() {
 
       {typingUsers.size > 0 && (
         <View style={styles.typingContainer}>
-          <View style={styles.typingBubble}>
+          <View style={[styles.typingBubble, { backgroundColor: isDarkMode ? '#333' : '#e5e7eb' }]}>
             {Array.from(typingUsers).map((user, idx) => (
-              <Text key={user} style={{ fontSize: 12, color: '#6b7280', marginRight: 4 }}>
+               <Text key={user} style={{ fontSize: 12, color: isDarkMode ? '#aaa' : '#6b7280', marginRight: 4 }}>
                 {user}{idx < typingUsers.size - 1 ? ',' : ''} typing
               </Text>
             ))}
             <View style={{ flexDirection: 'row', marginLeft: 6 }}>
-              <View style={styles.typingDot} />
-              <View style={[styles.typingDot, { opacity: 0.7 }]} />
-              <View style={[styles.typingDot, { opacity: 0.4 }]} />
+               <View style={[styles.typingDot, { backgroundColor: isDarkMode ? '#aaa' : '#6b7280' }]} />
+               <View style={[styles.typingDot, { opacity: 0.7, backgroundColor: isDarkMode ? '#aaa' : '#6b7280' }]} />
+               <View style={[styles.typingDot, { opacity: 0.4, backgroundColor: isDarkMode ? '#aaa' : '#6b7280' }]} />
             </View>
           </View>
         </View>
