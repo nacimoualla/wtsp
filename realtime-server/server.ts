@@ -18,9 +18,9 @@ const io = new Server(httpServer, {
 
 // 2. Start the HTTP Server and connect to Redis
 const PORT = process.env.PORT || 4000;
-httpServer.listen(PORT, async () => {
+httpServer.listen(PORT, '0.0.0.0', async () => {
   await connectRedis(); // This calls the function we exported from redisClient.ts
-  console.log(`🚀 Real-time server running on http://localhost:${PORT}`);
+  console.log(`🚀 Real-time server running on http://0.0.0.0:${PORT}`);
 });
 
 // 3. The Core Chat Logic

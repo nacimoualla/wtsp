@@ -16,7 +16,12 @@ import Constants from 'expo-constants';
 const SERVER_URL = "http://159.65.200.145:4000"; // Ensure this server is running and accessible from your device.
 
 const socket = io(SERVER_URL, {
-  autoConnect: false
+  autoConnect: false,
+  transports: ['polling', 'websocket'],
+  upgrade: true,
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000
 });
 
 const SECRET_PASSWORD = "bzizila";
@@ -199,7 +204,7 @@ export default function ChatScreen() {
             <Text style={styles.buttonText}>Enter Room</Text>
           </TouchableOpacity>
           <Text style={styles.versionText}>
-            Version {(Constants.manifest as any)?.version || '1.0.0'}
+            Version {(Constants.manifest as any)?.version || '1.1.2'}
           </Text>
         </View>
       </SafeAreaView>
