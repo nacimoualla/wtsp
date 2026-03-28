@@ -333,27 +333,31 @@ export default function ChatPage() {
               key={i}
               className={`mb-4 flex ${isMe ? "justify-end" : "justify-start"} group relative ${isHighlighted ? "highlight-message" : ""} message-enter`}
             >
-              {/* Reply button - appears on hover */}
-              <button
-                type="button"
-                onClick={() => setReplyingTo(msg)}
-                className="absolute top-0 right-0 -mt-2 -mr-2 rounded-full bg-white p-1 shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                title="Reply"
-              >
-                <svg className="h-4 w-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                </svg>
-              </button>
-              {/* Reaction button - appears on hover */}
-              <button
-                type="button"
-                onClick={() => handleToggleReaction(messageKey, '👍')}
-                className="absolute top-0 right-6 -mt-2 -mr-2 rounded-full bg-white p-1 shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                title="React"
-              >
-                <span className="text-sm">👍</span>
-              </button>
-              <div className={`max-w-md ${isMe ? "order-2" : ""}`}>
+              <div className={`relative max-w-md ${isMe ? "order-2" : ""}`}>
+                {/* Action buttons - positioned relative to bubble */}
+                <div className={`absolute top-0 ${isMe ? "-left-10" : "-right-10"} flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity`}>
+                  {/* Reply button */}
+                  <button
+                    type="button"
+                    onClick={() => setReplyingTo(msg)}
+                    className="rounded-full bg-white p-1.5 shadow-md z-10"
+                    title="Reply"
+                  >
+                    <svg className="h-4 w-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                    </svg>
+                  </button>
+                  {/* Reaction button */}
+                  <button
+                    type="button"
+                    onClick={() => handleToggleReaction(messageKey, '👍')}
+                    className="rounded-full bg-white p-1.5 shadow-md z-10"
+                    title="React"
+                  >
+                    <span className="text-sm">👍</span>
+                  </button>
+                </div>
+                
                 {!isMe && (
                   <p className="mb-1 ml-1 text-xs text-black">
                     {msg.sender}
@@ -368,9 +372,18 @@ export default function ChatPage() {
                 >
                   {/* Reply quote */}
                   {msg.replyTo && (
-                    <div className="mb-2 cursor-pointer rounded bg-black/5 p-2 text-left" onClick={() => scrollToMessage(msg.replyTo!.key)}>
-                      <p className="text-xs font-semibold text-blue-600">{msg.replyTo.sender}</p>
-                      <p className="text-sm text-zinc-600 line-clamp-2">{msg.replyTo.text}</p>
+                    <div 
+                      className={`mb-2 cursor-pointer rounded p-2 text-left ${
+                        isMe ? 'bg-white/10' : 'bg-black/5'
+                      }`} 
+                      onClick={() => scrollToMessage(msg.replyTo!.key)}
+                    >
+                      <p className={`text-xs font-semibold ${isMe ? 'text-white' : 'text-blue-600'}`}>
+                        {msg.replyTo.sender}
+                      </p>
+                      <p className={`text-sm line-clamp-2 ${isMe ? 'text-white/80' : 'text-zinc-600'}`}>
+                        {msg.replyTo.text}
+                      </p>
                     </div>
                   )}
                   <p className="text-base text-inherit">{msg.text}</p>
