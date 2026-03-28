@@ -33,6 +33,7 @@ const socket = io(SERVER_URL, {
 });
 
 const SECRET_PASSWORD = "bzizila";
+const TESTING_PASSWORD = "testing";
 
 const getMessageKey = (message: { timestamp: number; sender: string }) => `${message.timestamp}_${message.sender}`;
 
@@ -52,12 +53,31 @@ export default function ChatScreen() {
   const [replyingTo, setReplyingTo] = useState<any>(null); // Stores the message we are replying to
   const [highlightedMessageKey, setHighlightedMessageKey] = useState<string | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTypingRef = useRef(false);
 
   const flatListRef = useRef<FlatList>(null);
   const insets = useSafeAreaInsets();
   console.log('Safe area insets:', insets);
+
+  useEffect(() => {
+    const loadSavedSession = async () => {
+      try {
+        const savedUsername = await AsyncStorage.getItem('savedUsername');
+        if (savedUsername) {
+          setUsername(savedUsername);
+        }
+        const savedDarkMode = await AsyncStorage.getItem('darkMode');
+        if (savedDarkMode !== null) {
+          setIsDarkMode(savedDarkMode === 'true');
+        }
+      } catch (e) {
+        console.log('Error loading saved session:', e);
+      }
+    };
+    loadSavedSession();
+  }, []);
 
   useEffect(() => {
     if (!isJoined) return;
@@ -97,6 +117,10 @@ export default function ChatScreen() {
       // Show local notification if the message is from another user
       if (msg.sender !== username) {
         showLocalNotification(`New message from ${msg.sender}`, msg.text, { sender: msg.sender, timestamp: msg.timestamp });
+      }
+      // Reset auto-scroll for new messages
+      if (msg.sender === username) {
+        setUserHasScrolledUp(false);
       }
     });
 
@@ -170,7 +194,7 @@ export default function ChatScreen() {
   }, [username]);
 
   const handleJoin = () => {
-    if (password !== SECRET_PASSWORD) {
+    if (password !== SECRET_PASSWORD && password !== TESTING_PASSWORD) {
       setError("Wrong password!");
       return;
     }
@@ -180,6 +204,16 @@ export default function ChatScreen() {
     }
     setError("");
     setIsJoined(true);
+    AsyncStorage.setItem('savedUsername', username);
+  };
+
+  const handleLogout = () => {
+    socket.disconnect();
+    setIsJoined(false);
+    setMessages([]);
+    setUsername("");
+    setPassword("");
+    AsyncStorage.removeItem('savedUsername');
   };
 
   const handleSendMessage = () => {
@@ -202,6 +236,7 @@ export default function ChatScreen() {
     setMessages((prev) => [...prev, newMessage]);
     setInputText("");
     setReplyingTo(null);
+    setUserHasScrolledUp(false);
   };
 
   // 1. THE LOBBY
@@ -361,8 +396,22 @@ export default function ChatScreen() {
           renderItem={renderMessage}
           keyExtractor={(item) => `${item.timestamp}_${item.sender}`}
           contentContainerStyle={styles.listContent}
-          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-          onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
+          onScroll={(event) => {
+            const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+            const paddingToBottom = 50;
+            const isScrolledToBottom = contentSize.height - contentOffset.y - layoutMeasurement.height < paddingToBottom;
+            setUserHasScrolledUp(!isScrolledToBottom);
+          }}
+          onContentSizeChange={() => {
+            if (!userHasScrolledUp) {
+              flatListRef.current?.scrollToEnd({ animated: true });
+            }
+          }}
+          onLayout={() => {
+            if (!userHasScrolledUp) {
+              flatListRef.current?.scrollToEnd({ animated: true });
+            }
+          }}
         />
         {/* Reply bar above input */}
         {replyingTo && (

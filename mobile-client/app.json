@@ -14,6 +14,7 @@
     "android": {
       "usesCleartextTraffic": true,
       "package": "com.douae.app",
+      "permissions": ["POST_NOTIFICATIONS"],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -21,7 +22,12 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "notification": {
+        "icon": "./assets/images/notification-icon.png",
+        "color": "#2563eb",
+        "channelId": "default"
+      }
     },
     "web": {
       "output": "static",
