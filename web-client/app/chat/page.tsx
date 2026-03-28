@@ -42,6 +42,12 @@ export default function ChatPage() {
   const [activeUsers, setActiveUsers] = useState<string[]>([]);
   const [readReceipts, setReadReceipts] = useState<Record<string, string[]>>({});
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default");
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const saved = localStorage.getItem('darkMode');
+    if (saved !== null) return saved === 'true';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -193,6 +199,16 @@ export default function ChatPage() {
     };
   }, [username]);
 
+  // Apply dark mode preference
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('darkMode', String(isDarkMode));
+  }, [isDarkMode]);
+
   const handleJoin = (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== SECRET_PASSWORD) {
@@ -258,12 +274,12 @@ export default function ChatPage() {
   // LOBBY
   if (!isJoined) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-100">
+      <div className="flex min-h-screen items-center justify-center bg-zinc-100 dark:bg-zinc-900">
         <form
           onSubmit={handleJoin}
-          className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-lg"
+          className="w-full max-w-sm rounded-2xl bg-white dark:bg-zinc-800 p-8 shadow-lg"
         >
-          <h1 className="mb-6 text-center text-2xl font-bold text-black">
+          <h1 className="mb-6 text-center text-2xl font-bold text-black dark:text-white">
             Secret Group Chat
           </h1>
 
@@ -278,14 +294,14 @@ export default function ChatPage() {
             placeholder="Your Name"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="mb-4 w-full rounded-lg border bg-white text-black placeholder-zinc-500 border-zinc-300 px-4 py-3 text-lg outline-none focus:border-blue-500"
+            className="mb-4 w-full rounded-lg border bg-white dark:bg-zinc-700 text-black dark:text-white placeholder-zinc-500 dark:placeholder-zinc-400 border-zinc-300 dark:border-zinc-600 px-4 py-3 text-lg outline-none focus:border-blue-500 dark:focus:border-blue-400"
           />
           <input
             type="password"
             placeholder="Secret Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mb-6 w-full rounded-lg border bg-white text-black placeholder-zinc-500 border-zinc-300 px-4 py-3 text-lg outline-none focus:border-blue-500"
+            className="mb-6 w-full rounded-lg border bg-white dark:bg-zinc-700 text-black dark:text-white placeholder-zinc-500 dark:placeholder-zinc-400 border-zinc-300 dark:border-zinc-600 px-4 py-3 text-lg outline-none focus:border-blue-500 dark:focus:border-blue-400"
           />
 
           <button
@@ -301,15 +317,33 @@ export default function ChatPage() {
 
   // CHAT ROOM
   return (
-    <div className="flex h-screen flex-col bg-zinc-50">
+    <div className="flex h-screen flex-col bg-zinc-50 dark:bg-zinc-900">
       {/* Header */}
-      <div className="border-b border-zinc-200 bg-white px-6 py-4">
-        <h1 className="text-lg font-bold text-black">Friend Group Chat</h1>
-        <p className="text-sm text-black">Chatting as {username}</p>
+      <div className="border-b border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-bold text-black dark:text-white">Friend Group Chat</h1>
+          <button
+            type="button"
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            className="rounded-full p-2 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700"
+            title={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {isDarkMode ? (
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            ) : (
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              </svg>
+            )}
+          </button>
+        </div>
+        <p className="text-sm text-black dark:text-zinc-300">Chatting as {username}</p>
         {activeUsers.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
             {activeUsers.map(user => (
-              <span key={user} className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+              <span key={user} className="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:text-green-200">
                 {user}
               </span>
             ))}
@@ -340,7 +374,7 @@ export default function ChatPage() {
                   <button
                     type="button"
                     onClick={() => setReplyingTo(msg)}
-                    className="rounded-full bg-white p-1.5 shadow-md z-10"
+                    className="rounded-full bg-white dark:bg-zinc-700 p-1.5 shadow-md z-10"
                     title="Reply"
                   >
                     <svg className="h-4 w-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -351,7 +385,7 @@ export default function ChatPage() {
                   <button
                     type="button"
                     onClick={() => handleToggleReaction(messageKey, '👍')}
-                    className="rounded-full bg-white p-1.5 shadow-md z-10"
+                    className="rounded-full bg-white dark:bg-zinc-700 p-1.5 shadow-md z-10"
                     title="React"
                   >
                     <span className="text-sm">👍</span>
@@ -359,7 +393,7 @@ export default function ChatPage() {
                 </div>
                 
                 {!isMe && (
-                  <p className="mb-1 ml-1 text-xs text-black">
+              <p className="mb-1 ml-1 text-xs text-black dark:text-zinc-300">
                     {msg.sender}
                   </p>
                 )}
@@ -367,7 +401,7 @@ export default function ChatPage() {
                   className={`rounded-2xl px-4 py-2.5 ${
                     isMe
                       ? "rounded-br-sm bg-blue-500 text-white"
-                      : "rounded-bl-sm bg-zinc-200 text-black"
+                      : "rounded-bl-sm bg-zinc-200 dark:bg-zinc-700 text-black dark:text-white"
                   }`}
                 >
                   {/* Reply quote */}
@@ -426,7 +460,7 @@ export default function ChatPage() {
               <p className="mb-1 ml-1 text-xs text-black">
                 {Array.from(typingUsers).join(", ")} {typingUsers.size === 1 ? "is" : "are"} typing
               </p>
-              <div className="flex space-x-1 rounded-2xl rounded-bl-sm bg-zinc-200 px-4 py-3">
+              <div className="flex space-x-1 rounded-2xl rounded-bl-sm bg-zinc-200 dark:bg-zinc-700 px-4 py-3">
                 <div className="typing-dot h-2 w-2 rounded-full bg-zinc-500"></div>
                 <div className="typing-dot h-2 w-2 rounded-full bg-zinc-500"></div>
                 <div className="typing-dot h-2 w-2 rounded-full bg-zinc-500"></div>
@@ -440,10 +474,10 @@ export default function ChatPage() {
       {/* Input */}
       <form
         onSubmit={handleSendMessage}
-        className="flex flex-col gap-2 border-t border-zinc-200 bg-white px-6 py-4"
+        className="flex flex-col gap-2 border-t border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-6 py-4"
       >
         {replyingTo && (
-          <div className="flex items-center gap-2 rounded-lg bg-zinc-100 px-4 py-2">
+          <div className="flex items-center gap-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 px-4 py-2">
             <div className="flex-1">
               <p className="text-sm font-semibold text-blue-600">
                 Replying to {replyingTo.sender}
@@ -467,7 +501,7 @@ export default function ChatPage() {
             placeholder="Type a message..."
             value={inputText}
             onChange={handleInputChange}
-            className="flex-1 rounded-full border bg-white text-black placeholder-zinc-500 border-zinc-300 px-5 py-2.5 text-base outline-none focus:border-blue-500"
+            className="flex-1 rounded-full border bg-white dark:bg-zinc-700 text-black dark:text-white placeholder-zinc-500 dark:placeholder-zinc-400 border-zinc-300 dark:border-zinc-600 px-5 py-2.5 text-base outline-none focus:border-blue-500 dark:focus:border-blue-400"
           />
           <button
             type="submit"
