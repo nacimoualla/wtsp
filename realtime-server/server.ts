@@ -23,14 +23,20 @@ const PORT = process.env.PORT || 4000;
   console.log(`🚀 Real-time server running on http://0.0.0.0:${PORT}`);
 });
 
-// 3. The Core Chat Logic
+  // Password to room mapping
+  const PASSWORD_ROOMS: Record<string, string> = {
+    "bzizila": "main_chat",
+    "testing": "testing_chat"
+  };
+
+  // 3. The Core Chat Logic
 io.on('connection', (socket) => {
   console.log(`🟢 User connected: ${socket.id}`);
 
-  // We are hardcoding the room since it's just you and your friends
-  const ROOM_ID = "friend_group_chat";
-  const REDIS_ROOM_KEY = `chat:${ROOM_ID}`;
-  const REDIS_REACTIONS_KEY = `reactions:${ROOM_ID}`;
+  // Room will be set when user joins with password
+  let ROOM_ID = "main_chat";
+  let REDIS_ROOM_KEY = `chat:${ROOM_ID}`;
+  let REDIS_REACTIONS_KEY = `reactions:${ROOM_ID}`;
 
   // Typing indicator: map socket id to { username, timeout }
   const typingUsers = new Map<string, { username: string; timeout: ReturnType<typeof setTimeout> }>();
@@ -145,7 +151,14 @@ io.on('connection', (socket) => {
   };
 
   // EVENT A: User Joins
-  socket.on("join_chat", async (username: string) => {
+  socket.on("join_chat", async (data: { username: string; password: string }) => {
+    const { username, password } = data;
+    
+    // Set room based on password
+    ROOM_ID = PASSWORD_ROOMS[password] || "main_chat";
+    REDIS_ROOM_KEY = `chat:${ROOM_ID}`;
+    REDIS_REACTIONS_KEY = `reactions:${ROOM_ID}`;
+    
     socket.join(ROOM_ID);
     // Store user in active users map
     activeUsers.set(socket.id, username);

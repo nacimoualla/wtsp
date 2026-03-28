@@ -138,7 +138,7 @@ export default function ChatPage() {
     if (!isJoined) return;
 
     socket.connect();
-    socket.emit("join_chat", username);
+    socket.emit("join_chat", { username, password });
 
     socket.on("chat_history", (history: Message[]) => {
       setMessages(history);
