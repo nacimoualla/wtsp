@@ -8,6 +8,7 @@ import { io } from 'socket.io-client';
 import { Stack } from 'expo-router';
 import { registerForPushNotificationsAsync, showLocalNotification } from '../../utils/notifications';
 import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import SwapableComponent from '../../components/SwapableComponent';
 
 
@@ -46,6 +47,7 @@ export default function ChatScreen() {
   const [isConnected, setIsConnected] = useState(false);
   const [replyingTo, setReplyingTo] = useState<any>(null); // Stores the message we are replying to
   const [highlightedMessageKey, setHighlightedMessageKey] = useState<string | null>(null);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTypingRef = useRef(false);
 
@@ -125,6 +127,10 @@ export default function ChatScreen() {
       setReactions(prev => ({ ...prev, ...updates }));
     });
 
+    socket.on("message_deleted", (messageKey: string) => {
+      setMessages(prev => prev.filter(msg => getMessageKey(msg) !== messageKey));
+    });
+
     return () => {
       socket.off('connect');
       socket.off('disconnect');
@@ -135,6 +141,7 @@ export default function ChatScreen() {
       socket.off("users_update");
       socket.off("read_receipts_update");
       socket.off("reaction_update");
+      socket.off("message_deleted");
       socket.disconnect();
     };
   }, [isJoined, username]);
@@ -239,6 +246,16 @@ export default function ChatScreen() {
     socket.emit('toggle_reaction', { messageKey, emoji });
   };
 
+  const onDeleteMessage = (messageKey: string) => {
+    socket.emit('delete_message', messageKey);
+  };
+
+  const toggleDarkMode = async () => {
+    const newValue = !isDarkMode;
+    setIsDarkMode(newValue);
+    await AsyncStorage.setItem('darkMode', String(newValue));
+  };
+
   const scrollToMessage = (messageKey: string) => {
     const index = messages.findIndex(msg => getMessageKey(msg) === messageKey);
     if (index >= 0) {
@@ -256,20 +273,22 @@ export default function ChatScreen() {
         currentUsername={username}
         onSwipeToReply={onSwipeToReply}
         onToggleReaction={onToggleReaction}
+        onDeleteMessage={onDeleteMessage}
         onPressReplyQuote={scrollToMessage}
         highlighted={highlightedMessageKey === messageKey}
+        isDarkMode={isDarkMode}
       />
     );
   };
 
   return (
-    <SafeAreaView style={styles.chatContainer}>
+    <SafeAreaView style={[styles.chatContainer, { backgroundColor: isDarkMode ? '#121212' : '#f9fafb' }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: isDarkMode ? '#1e1e1e' : 'white' }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={styles.headerTitle}>Friend Group Chat</Text>
+            <Text style={[styles.headerTitle, { color: isDarkMode ? 'white' : 'black' }]}>Friend Group Chat</Text>
             <View style={{
               width: 10,
               height: 10,
@@ -278,11 +297,16 @@ export default function ChatScreen() {
               marginLeft: 10,
             }} />
           </View>
-          <Text style={styles.versionTextHeader}>
-            v{(Constants.manifest as any)?.version || '1.0.0'}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity onPress={toggleDarkMode} style={{ marginRight: 15 }}>
+              <Text style={{ fontSize: 20 }}>{isDarkMode ? '☀️' : '🌙'}</Text>
+            </TouchableOpacity>
+            <Text style={styles.versionTextHeader}>
+              v{(Constants.manifest as any)?.version || '1.0.0'}
+            </Text>
+          </View>
         </View>
-        <Text style={styles.headerSub}>Chatting as {username}</Text>
+        <Text style={[styles.headerSub, { color: isDarkMode ? '#aaa' : '#555' }]}>Chatting as {username}</Text>
       </View>
 
       {activeUsers.length > 0 && (
@@ -342,9 +366,9 @@ export default function ChatScreen() {
             </TouchableOpacity>
           </View>
         )}
-        <View style={[styles.inputRow, { paddingBottom: insets.bottom + (Platform.OS === 'android' ? 48 : 0) + 10 }]}>
+        <View style={[styles.inputRow, { paddingBottom: insets.bottom + (Platform.OS === 'android' ? 48 : 0) + 10, backgroundColor: isDarkMode ? '#1e1e1e' : 'white' }]}>
           <TextInput
-            style={styles.chatInput}
+            style={[styles.chatInput, { backgroundColor: isDarkMode ? '#2c2c2c' : 'white', borderColor: isDarkMode ? '#444' : '#ddd', color: isDarkMode ? 'white' : 'black' }]}
             placeholder="Type a message..."
             placeholderTextColor="#666"
             value={inputText}

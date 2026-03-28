@@ -297,6 +297,35 @@ io.on('connection', (socket) => {
     broadcastReactionUpdates([messageKey]);
   });
 
+  // EVENT I: User deletes a message
+  socket.on("delete_message", async (messageKey: string) => {
+    const username = activeUsers.get(socket.id);
+    if (!username) return;
+    
+    // Fetch all messages from Redis
+    const rawMessages = await redisClient.lRange(REDIS_ROOM_KEY, 0, -1);
+    const messages = rawMessages.map(msg => JSON.parse(msg));
+    
+    // Find index of message with matching key
+    const index = messages.findIndex(msg => getMessageKey(msg) === messageKey);
+    if (index === -1) return;
+    
+    // Remove the message from the list using LREM
+    await redisClient.lRem(REDIS_ROOM_KEY, 1, rawMessages[index]);
+    
+    // Trim list to 100 messages
+    await redisClient.lTrim(REDIS_ROOM_KEY, 0, 99);
+    
+    // Clean up read receipts
+    messageReadReceipts.delete(messageKey);
+    
+    // Clean up reactions from Redis
+    await redisClient.hDel(REDIS_REACTIONS_KEY, messageKey);
+    
+    // Broadcast deletion to all clients
+    io.to(ROOM_ID).emit("message_deleted", messageKey);
+  });
+
   // EVENT C: User Disconnects
   socket.on('disconnect', () => {
     // Clear typing for this user

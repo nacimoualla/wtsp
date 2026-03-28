@@ -20,16 +20,23 @@ interface Props {
   onSwipeToReply: (message: Message) => void;
   onToggleReaction: (messageKey: string, emoji: string) => void;
   onPressReplyQuote?: (messageKey: string) => void;
+  onDeleteMessage?: (messageKey: string) => void;
   highlighted?: boolean;
+  isDarkMode?: boolean;
 }
 
 const EMOJI_LIST = ['👍', '❤️', '😂', '😮', '😢'];
 
-const MessageItem = ({ message, currentUsername, onSwipeToReply, onToggleReaction, onPressReplyQuote, highlighted }: Props) => {
+const MessageItem = ({ message, currentUsername, onSwipeToReply, onToggleReaction, onPressReplyQuote, onDeleteMessage, highlighted, isDarkMode = false }: Props) => {
   const isMe = message.sender === currentUsername;
   const messageKey = `${message.timestamp}_${message.sender}`;
 
-  // Swipe action for reply
+  const bubbleSent = isDarkMode ? '#1e40af' : '#3b82f6';
+  const bubbleReceived = isDarkMode ? '#333' : '#e5e7eb';
+  const textSent = 'white';
+  const textReceived = isDarkMode ? 'white' : 'black';
+
+  // Swipe action for reply (left swipe)
   const renderLeftActions = (progress: RNAnimated.AnimatedInterpolation<number>, dragX: RNAnimated.AnimatedInterpolation<number>) => {
     const scale = dragX.interpolate({
       inputRange: [0, 50, 100],
@@ -40,6 +47,22 @@ const MessageItem = ({ message, currentUsername, onSwipeToReply, onToggleReactio
       <View style={{ justifyContent: 'center', paddingLeft: 20 }}>
         <RNAnimated.View style={{ transform: [{ scale }] }}>
           <Text style={{ fontSize: 20 }}>↩️</Text>
+        </RNAnimated.View>
+      </View>
+    );
+  };
+
+  // Swipe action for delete (right swipe)
+  const renderRightActions = (progress: RNAnimated.AnimatedInterpolation<number>, dragX: RNAnimated.AnimatedInterpolation<number>) => {
+    const scale = dragX.interpolate({
+      inputRange: [-100, -50, 0],
+      outputRange: [1, 0.5, 0],
+      extrapolate: 'clamp',
+    });
+    return (
+      <View style={{ justifyContent: 'center', paddingRight: 20 }}>
+        <RNAnimated.View style={{ transform: [{ scale }] }}>
+          <Text style={{ fontSize: 20 }}>🗑️</Text>
         </RNAnimated.View>
       </View>
     );
@@ -91,7 +114,9 @@ const MessageItem = ({ message, currentUsername, onSwipeToReply, onToggleReactio
   return (
     <Swipeable
       renderLeftActions={renderLeftActions}
-      onSwipeableWillOpen={() => onSwipeToReply(message)}
+      renderRightActions={renderRightActions}
+      onSwipeableLeftOpen={() => onSwipeToReply(message)}
+      onSwipeableRightOpen={() => onDeleteMessage?.(messageKey)}
     >
       <Animated.View
         entering={FadeInDown.duration(400)}
@@ -107,7 +132,7 @@ const MessageItem = ({ message, currentUsername, onSwipeToReply, onToggleReactio
           </Text>
         )}
         <View style={{
-          backgroundColor: highlighted ? '#fef08a' : (isMe ? '#3b82f6' : '#e5e7eb'),
+          backgroundColor: highlighted ? '#fef08a' : (isMe ? bubbleSent : bubbleReceived),
           padding: 12,
           borderRadius: 20,
           borderBottomRightRadius: isMe ? 4 : 20,
@@ -120,23 +145,27 @@ const MessageItem = ({ message, currentUsername, onSwipeToReply, onToggleReactio
               activeOpacity={0.7}
             >
               <View style={{
-                backgroundColor: 'rgba(0,0,0,0.05)',
+                backgroundColor: isMe 
+                  ? (isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.15)')
+                  : (isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'),
                 borderLeftWidth: 3,
-                borderLeftColor: '#007AFF',
+                borderLeftColor: isMe 
+                  ? (isDarkMode ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.5)')
+                  : (isDarkMode ? '#60a5fa' : '#007AFF'),
                 padding: 8,
                 borderRadius: 4,
                 marginBottom: 4,
               }}>
-                <Text style={{ fontWeight: 'bold', fontSize: 12, color: '#007AFF', marginBottom: 2 }}>
+                <Text style={{ fontWeight: 'bold', fontSize: 12, color: isMe ? (isDarkMode ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.9)') : (isDarkMode ? '#60a5fa' : '#007AFF'), marginBottom: 2 }}>
                   {message.replyTo.sender}
                 </Text>
-                <Text style={{ fontSize: 13, color: '#555' }} numberOfLines={2}>
+                <Text style={{ fontSize: 13, color: isMe ? (isDarkMode ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.8)') : (isDarkMode ? '#ccc' : '#555') }} numberOfLines={2}>
                   {message.replyTo.text}
                 </Text>
               </View>
             </TouchableOpacity>
           )}
-          <Text style={{ color: isMe ? 'white' : 'black', fontSize: 16 }}>
+          <Text style={{ color: isMe ? textSent : textReceived, fontSize: 16 }}>
             {message.text}
           </Text>
         </View>
