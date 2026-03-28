@@ -17,7 +17,8 @@ const SERVER_URL = "http://159.65.200.145:4000"; // Ensure this server is runnin
 
 const socket = io(SERVER_URL, {
   autoConnect: false,
-  transports: ['polling', 'websocket'],
+  path: "/socket.io",
+  transports: ["polling", "websocket"],
   upgrade: true,
   reconnection: true,
   reconnectionAttempts: 5,
@@ -204,7 +205,7 @@ export default function ChatScreen() {
             <Text style={styles.buttonText}>Enter Room</Text>
           </TouchableOpacity>
           <Text style={styles.versionText}>
-            Version {(Constants.manifest as any)?.version || '1.1.2'}
+            Version {(Constants.manifest as any)?.version || '1.1.3'}
           </Text>
         </View>
       </SafeAreaView>
