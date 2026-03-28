@@ -44,7 +44,7 @@ export default function ChatPage() {
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default");
   const [showReactionPicker, setShowReactionPicker] = useState<string | null>(null);
 
-  const EMOJI_LIST = ['👍', '❤️', '😂'];
+  const EMOJI_LIST = ['👍', '❤️', '😂', '😮', '😢'];
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window === 'undefined') return false;
     const saved = localStorage.getItem('darkMode');

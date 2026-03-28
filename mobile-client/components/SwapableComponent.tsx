@@ -27,7 +27,7 @@ interface Props {
   reactions?: Record<string, number>;
 }
 
-const EMOJI_LIST = ['👍', '❤️', '😂'];
+const EMOJI_LIST = ['👍', '❤️', '😂', '😮', '😢'];
 
 const MessageItem = ({ message, currentUsername, onSwipeToReply, onToggleReaction, onPressReplyQuote, onDeleteMessage, highlighted, isDarkMode = false, reactions = {} }: Props) => {
   const isMe = message.sender === currentUsername;
@@ -101,7 +101,7 @@ const MessageItem = ({ message, currentUsername, onSwipeToReply, onToggleReactio
     if (!showReactions) return null;
     return (
       <Animated.View entering={FadeIn.duration(300)} style={{ flexDirection: 'row', marginTop: 4, justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
-        {EMOJI_LIST.slice(0, 3).map(emoji => (
+        {EMOJI_LIST.map(emoji => (
           <TouchableOpacity
             key={emoji}
             onPress={() => {
