@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { io } from "socket.io-client";
+import AudioPlayer from "@/components/AudioPlayer";
 
 // Use proxy on Vercel to avoid Mixed Content error, fallback to direct IP locally
 const SERVER_URL = process.env.NODE_ENV === "production" ? "" : (process.env.NEXT_PUBLIC_SERVER_URL || "http://159.65.200.145:4000");
@@ -26,6 +27,9 @@ interface Message {
     text: string;
     sender: string;
   };
+  type?: string;
+  audioUrl?: string;
+  audioDuration?: number;
   reactions?: Record<string, number>;
 }
 
@@ -493,7 +497,16 @@ export default function ChatPage() {
                       </p>
                     </div>
                   )}
-                  <p className="text-base text-inherit">{msg.text}</p>
+                  {/* Audio message or text */}
+                  {msg.type === "audio" && msg.audioUrl ? (
+                    <AudioPlayer
+                      audioUrl={msg.audioUrl}
+                      duration={msg.audioDuration || 0}
+                      isMe={isMe}
+                    />
+                  ) : (
+                    <p className="text-base text-inherit">{msg.text}</p>
+                  )}
                   {/* Reactions */}
                   {hasReactions && (
                     <div className="mt-2 flex flex-wrap gap-1">

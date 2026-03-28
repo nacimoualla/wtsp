@@ -1,4 +1,5 @@
 import { useState } from "react";
+import AudioPlayer from "./AudioPlayer";
 import { Swipeable } from "react-native-gesture-handler";
 import { View, Text, Animated as RNAnimated, TouchableOpacity } from "react-native";
 import Animated, { FadeInDown, FadeIn } from "react-native-reanimated";
@@ -13,6 +14,9 @@ interface Message {
     sender: string;
   };
   reactions?: Record<string, number>;
+  type?: string;
+  audioUrl?: string;
+  audioDuration?: number;
 }
 
 interface Props {
@@ -25,6 +29,9 @@ interface Props {
   highlighted?: boolean;
   isDarkMode?: boolean;
   reactions?: Record<string, number>;
+  type?: string;
+  audioUrl?: string;
+  audioDuration?: number;
 }
 
 const EMOJI_LIST = ['👍', '❤️', '😂', '😮', '😢'];
@@ -176,9 +183,17 @@ const MessageItem = ({ message, currentUsername, onSwipeToReply, onToggleReactio
                 </View>
               </TouchableOpacity>
             )}
-            <Text style={{ color: isMe ? textSent : textReceived, fontSize: 16 }}>
-              {message.text}
-            </Text>
+            {message.type === "audio" && message.audioUrl ? (
+              <AudioPlayer
+                audioUrl={message.audioUrl}
+                duration={message.audioDuration || 0}
+                isDarkMode={isDarkMode}
+              />
+            ) : (
+              <Text style={{ color: isMe ? textSent : textReceived, fontSize: 16 }}>
+                {message.text}
+              </Text>
+            )}
           </View>
         </TouchableOpacity>
         {/* Reactions */}

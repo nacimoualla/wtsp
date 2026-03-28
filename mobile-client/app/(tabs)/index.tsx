@@ -10,6 +10,8 @@ import { registerForPushNotificationsAsync, showLocalNotification } from '../../
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import SwapableComponent from '../../components/SwapableComponent';
+import AudioRecorder from '../../components/AudioRecorder';
+import AudioPlayer from '../../components/AudioPlayer';
 
 export const options = {
   tabBarStyle: { display: 'none' },
@@ -239,6 +241,23 @@ export default function ChatScreen() {
     setUserHasScrolledUp(false);
   };
 
+  const handleAudioRecorded = (audioUrl: string, duration: number) => {
+    emitTyping(false);
+
+    const newMessage = {
+      sender: username,
+      text: ,
+      timestamp: Date.now(),
+      type: audio,
+      audioUrl,
+      audioDuration: duration,
+    };
+
+    socket.emit(send_message, newMessage);
+    setMessages((prev) => [...prev, newMessage]);
+    setUserHasScrolledUp(false);
+  };
+
   // 1. THE LOBBY
   if (!isJoined) {
     return (
@@ -430,6 +449,7 @@ export default function ChatScreen() {
           </View>
         )}
         <View style={[styles.inputRow, { paddingBottom: insets.bottom + (Platform.OS === 'android' ? 48 : 0) + 10, backgroundColor: isDarkMode ? '#1e1e1e' : 'white' }]}>
+          <AudioRecorder onAudioRecorded={handleAudioRecorded} isDarkMode={isDarkMode} />
           <TextInput
             style={[styles.chatInput, { backgroundColor: isDarkMode ? '#2c2c2c' : 'white', borderColor: isDarkMode ? '#444' : '#ddd', color: isDarkMode ? 'white' : 'black' }]}
             placeholder="Type a message..."

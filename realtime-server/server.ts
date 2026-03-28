@@ -3,6 +3,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import redisClient, { connectRedis } from './redisClient.js';
 import { Expo } from 'expo-server-sdk';
+import { startAudioCleanupScheduler } from './audioCleanup';
 
 const app = express();
 const httpServer = createServer(app);
@@ -20,6 +21,9 @@ const io = new Server(httpServer, {
 const PORT = process.env.PORT || 4000;
   httpServer.listen(Number(PORT), '0.0.0.0', async () => {
   await connectRedis(); // This calls the function we exported from redisClient.ts
+    n    // Start audio cleanup scheduler
+    startAudioCleanupScheduler();
+
   console.log(`🚀 Real-time server running on http://0.0.0.0:${PORT}`);
 });
 
