@@ -21,7 +21,7 @@ const io = new Server(httpServer, {
 const PORT = process.env.PORT || 4000;
   httpServer.listen(Number(PORT), '0.0.0.0', async () => {
   await connectRedis(); // This calls the function we exported from redisClient.ts
-    n    // Start audio cleanup scheduler
+   // Start audio cleanup scheduler
     startAudioCleanupScheduler();
 
   console.log(`🚀 Real-time server running on http://0.0.0.0:${PORT}`);
