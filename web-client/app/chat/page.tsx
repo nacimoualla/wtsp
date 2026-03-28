@@ -42,6 +42,9 @@ export default function ChatPage() {
   const [activeUsers, setActiveUsers] = useState<string[]>([]);
   const [readReceipts, setReadReceipts] = useState<Record<string, string[]>>({});
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default");
+  const [showReactionPicker, setShowReactionPicker] = useState<string | null>(null);
+
+  const EMOJI_LIST = ['👍', '❤️', '😂'];
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window === 'undefined') return false;
     const saved = localStorage.getItem('darkMode');
@@ -391,14 +394,33 @@ export default function ChatPage() {
                     </svg>
                   </button>
                   {/* Reaction button */}
-                  <button
-                    type="button"
-                    onClick={() => handleToggleReaction(messageKey, '👍')}
-                    className="rounded-full bg-white dark:bg-zinc-700 p-1.5 shadow-md z-10"
-                    title="React"
-                  >
-                    <span className="text-sm">👍</span>
-                  </button>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowReactionPicker(showReactionPicker === messageKey ? null : messageKey)}
+                      className="rounded-full bg-white dark:bg-zinc-700 p-1.5 shadow-md z-10"
+                      title="React"
+                    >
+                      <span className="text-sm">👍</span>
+                    </button>
+                    {showReactionPicker === messageKey && (
+                      <div className="absolute top-6 left-0 flex gap-1 rounded-full bg-white dark:bg-zinc-700 p-1 shadow-lg z-20">
+                        {EMOJI_LIST.map(emoji => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            onClick={() => {
+                              handleToggleReaction(messageKey, emoji);
+                              setShowReactionPicker(null);
+                            }}
+                            className="rounded-full p-1 hover:bg-zinc-100 dark:hover:bg-zinc-600"
+                          >
+                            <span className="text-lg">{emoji}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   {/* Delete button */}
                   <button
                     type="button"

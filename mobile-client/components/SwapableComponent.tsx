@@ -27,7 +27,7 @@ interface Props {
   reactions?: Record<string, number>;
 }
 
-const EMOJI_LIST = ['👍', '❤️', '😂', '😮', '😢'];
+const EMOJI_LIST = ['👍', '❤️', '😂'];
 
 const MessageItem = ({ message, currentUsername, onSwipeToReply, onToggleReaction, onPressReplyQuote, onDeleteMessage, highlighted, isDarkMode = false, reactions = {} }: Props) => {
   const isMe = message.sender === currentUsername;
