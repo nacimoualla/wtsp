@@ -175,6 +175,10 @@ export default function ChatPage() {
       setReactions(prev => ({ ...prev, ...updates }));
     });
 
+    socket.on("message_deleted", (messageKey: string) => {
+      setMessages(prev => prev.filter(msg => getMessageKey(msg) !== messageKey));
+    });
+
     return () => {
       socket.off("chat_history");
       socket.off("new_message");
@@ -182,6 +186,7 @@ export default function ChatPage() {
       socket.off("users_update");
       socket.off("read_receipts_update");
       socket.off("reaction_update");
+      socket.off("message_deleted");
       socket.disconnect();
     };
   }, [isJoined, showNotification, username, emitMessagesRead]);
@@ -269,6 +274,10 @@ export default function ChatPage() {
 
   const handleToggleReaction = (messageKey: string, emoji: string) => {
     socket.emit('toggle_reaction', { messageKey, emoji });
+  };
+
+  const handleDeleteMessage = (messageKey: string) => {
+    socket.emit('delete_message', messageKey);
   };
 
   // LOBBY
@@ -389,6 +398,17 @@ export default function ChatPage() {
                     title="React"
                   >
                     <span className="text-sm">👍</span>
+                  </button>
+                  {/* Delete button */}
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteMessage(messageKey)}
+                    className="rounded-full bg-white dark:bg-zinc-700 p-1.5 shadow-md z-10"
+                    title="Delete"
+                  >
+                    <svg className="h-4 w-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
                   </button>
                 </div>
                 
