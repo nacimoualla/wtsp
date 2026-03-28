@@ -8,10 +8,10 @@ import cron from 'node-cron';
 
 // Cloudflare R2 Configuration
 const R2_CONFIG = {
-  accountId: process.env.R2_ACCOUNT_ID || 'YOUR_CLOUDFLARE_ACCOUNT_ID',
-  accessKeyId: process.env.R2_ACCESS_KEY_ID || 'YOUR_R2_ACCESS_KEY_ID',
-  secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || 'YOUR_R2_SECRET_ACCESS_KEY',
-  bucketName: process.env.R2_BUCKET_NAME || 'YOUR_R2_BUCKET_NAME',
+  accountId: process.env.R2_ACCOUNT_ID || 'c9a4537b9a1c43578ccc82d2a6771d88',
+  accessKeyId: process.env.R2_ACCESS_KEY_ID || '1066d035159616d706f9e46dc8652657',
+  secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || 'f6bfecfa780fc778bd0cecd65946153a8d1051cc26b37828f556d51a0af78ee5',
+  bucketName: process.env.R2_BUCKET_NAME || 'chat',
 };
 
 const s3Client = new S3Client({

@@ -10,21 +10,11 @@ import { PutObjectCommand, S3Client, DeleteObjectCommand } from '@aws-sdk/client
 // Replace these with your actual R2 credentials
 // ============================================
 const R2_CONFIG = {
-  // Your Cloudflare Account ID
-  accountId: 'YOUR_CLOUDFLARE_ACCOUNT_ID',
-  
-  // R2 Access Key (create in Cloudflare Dashboard > R2 > Manage R2 API Tokens)
-  accessKeyId: 'YOUR_R2_ACCESS_KEY_ID',
-  
-  // R2 Secret Key
-  secretAccessKey: 'YOUR_R2_SECRET_ACCESS_KEY',
-  
-  // Your R2 bucket name
-  bucketName: 'YOUR_R2_BUCKET_NAME',
-  
-  // Your custom domain for R2 (optional, or use the r2.dev public URL)
-  // Example: https://pub-xxx.r2.dev or your custom domain
-  publicUrl: 'https://YOUR_PUBLIC_URL.r2.dev',
+  accountId: 'c9a4537b9a1c43578ccc82d2a6771d88',
+  accessKeyId: '1066d035159616d706f9e46dc8652657',
+  secretAccessKey: 'f6bfecfa780fc778bd0cecd65946153a8d1051cc26b37828f556d51a0af78ee5',
+  bucketName: 'chat',
+  publicUrl: 'https://pub-c9a4537b9a1c43578ccc82d2a6771d88.r2.dev',
 };
 
 // S3 Client configured for Cloudflare R2
