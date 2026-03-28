@@ -138,11 +138,9 @@ export default function ChatPage() {
     };
   }, [notificationPermission, username]);
 
+  // Set up socket listeners after successful join
   useEffect(() => {
     if (!isJoined) return;
-
-    socket.connect();
-    socket.emit("join_chat", { username, password });
 
     socket.on("chat_history", (history: Message[]) => {
       setMessages(history);
@@ -203,7 +201,6 @@ export default function ChatPage() {
       socket.off("read_receipts_update");
       socket.off("reaction_update");
       socket.off("message_deleted");
-      socket.disconnect();
     };
   }, [isJoined, showNotification, username, emitMessagesRead]);
 
@@ -230,19 +227,50 @@ export default function ChatPage() {
     localStorage.setItem('darkMode', String(isDarkMode));
   }, [isDarkMode]);
 
+  const [isJoining, setIsJoining] = useState(false);
+
   const handleJoin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password !== SECRET_PASSWORD && password !== TESTING_PASSWORD) {
-      setError("Wrong password!");
-      return;
-    }
     if (!username.trim()) {
       setError("Please enter a name!");
       return;
     }
+    if (!password.trim()) {
+      setError("Please enter a password!");
+      return;
+    }
     setError("");
-    setIsJoined(true);
-    localStorage.setItem('savedUsername', username);
+    setIsJoining(true);
+    
+    // Connect socket and send join request
+    socket.connect();
+    
+    // Wait for connection then send join_chat
+    const onConnect = () => {
+      socket.off('connect', onConnect);
+      socket.emit("join_chat", { username, password });
+    };
+    
+    const onJoinSuccess = () => {
+      socket.off('join_success', onJoinSuccess);
+      socket.off('join_error', onJoinError);
+      setIsJoined(true);
+      setIsJoining(false);
+      localStorage.setItem('savedUsername', username);
+    };
+    
+    const onJoinError = (data: { error: string }) => {
+      socket.off('join_success', onJoinSuccess);
+      socket.off('join_error', onJoinError);
+      socket.off('connect', onConnect);
+      setError(data.error || "Invalid password");
+      setIsJoining(false);
+      socket.disconnect();
+    };
+    
+    socket.on('connect', onConnect);
+    socket.on('join_success', onJoinSuccess);
+    socket.on('join_error', onJoinError);
   };
 
   const handleLogout = () => {
@@ -341,9 +369,10 @@ export default function ChatPage() {
 
           <button
             type="submit"
-            className="w-full rounded-lg bg-blue-600 py-3 text-lg font-semibold text-white transition-colors hover:bg-blue-700"
+            disabled={isJoining}
+            className="w-full rounded-lg bg-blue-600 py-3 text-lg font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            Enter Room
+            {isJoining ? 'Connecting...' : 'Enter Room'}
           </button>
         </form>
       </div>

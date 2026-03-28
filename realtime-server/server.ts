@@ -155,11 +155,19 @@ io.on('connection', (socket) => {
   };
 
   // EVENT A: User Joins
-  socket.on("join_chat", async (data: { username: string; password: string }) => {
+  socket.on("join_chat", async (data: { username: string; password: string }, callback?: (response: { success: boolean; error?: string }) => void) => {
     const { username, password } = data;
     
+    // Validate password on server side
+    if (!PASSWORD_ROOMS[password]) {
+      console.log(`❌ Invalid password attempt from ${username}`);
+      socket.emit("join_error", { error: "Invalid password" });
+      if (callback) callback({ success: false, error: "Invalid password" });
+      return;
+    }
+    
     // Set room based on password
-    ROOM_ID = PASSWORD_ROOMS[password] || "main_chat";
+    ROOM_ID = PASSWORD_ROOMS[password];
     REDIS_ROOM_KEY = `chat:${ROOM_ID}`;
     REDIS_REACTIONS_KEY = `reactions:${ROOM_ID}`;
     
@@ -193,6 +201,11 @@ io.on('connection', (socket) => {
     
     // Send read receipts for these messages
     emitReadReceiptsToSocket(socket, messageKeys);
+    
+    // Confirm successful join
+    console.log(`✅ User ${username} joined ${ROOM_ID}`);
+    socket.emit("join_success", { room: ROOM_ID });
+    if (callback) callback({ success: true });
   });
 
   // EVENT B: User Sends a Message

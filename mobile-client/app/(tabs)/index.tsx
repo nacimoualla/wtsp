@@ -47,6 +47,7 @@ export default function ChatScreen() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isJoined, setIsJoined] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const [activeUsers, setActiveUsers] = useState<string[]>([]);
   const [readReceipts, setReadReceipts] = useState<Record<string, string[]>>({});
@@ -81,10 +82,9 @@ export default function ChatScreen() {
     loadSavedSession();
   }, []);
 
+  // Set up socket listeners after successful join
   useEffect(() => {
     if (!isJoined) return;
-
-    socket.connect();
 
     socket.on('connect', () => {
       console.log('Socket connected');
@@ -107,7 +107,6 @@ export default function ChatScreen() {
         socket.emit('register_push_token', token);
       }
     });
-    socket.emit("join_chat", { username, password });
 
     socket.on("chat_history", (history: any[]) => {
       console.log('Received chat history:', history.length, 'messages');
@@ -172,7 +171,6 @@ export default function ChatScreen() {
       socket.off("read_receipts_update");
       socket.off("reaction_update");
       socket.off("message_deleted");
-      socket.disconnect();
     };
   }, [isJoined, username]);
 
@@ -196,17 +194,46 @@ export default function ChatScreen() {
   }, [username]);
 
   const handleJoin = () => {
-    if (password !== SECRET_PASSWORD && password !== TESTING_PASSWORD) {
-      setError("Wrong password!");
-      return;
-    }
     if (!username.trim()) {
       setError("Please enter a name!");
       return;
     }
+    if (!password.trim()) {
+      setError("Please enter a password!");
+      return;
+    }
     setError("");
-    setIsJoined(true);
-    AsyncStorage.setItem('savedUsername', username);
+    setIsJoining(true);
+    
+    // Connect socket and send join request
+    socket.connect();
+    
+    // Wait for connection then send join_chat
+    const onConnect = () => {
+      socket.off('connect', onConnect);
+      socket.emit("join_chat", { username, password });
+    };
+    
+    const onJoinSuccess = () => {
+      socket.off('join_success', onJoinSuccess);
+      socket.off('join_error', onJoinError);
+      setIsJoined(true);
+      setIsJoining(false);
+      AsyncStorage.setItem('savedUsername', username);
+    };
+    
+    const onJoinError = (data: { error: string }) => {
+      socket.off('join_success', onJoinSuccess);
+      socket.off('join_error', onJoinError);
+      socket.off('connect', onConnect);
+      setError(data.error || "Invalid password");
+      setIsJoining(false);
+      socket.disconnect();
+    };
+    
+    socket.on('connect', onConnect);
+    socket.on('join_success', onJoinSuccess);
+    socket.on('join_error', onJoinError);
   };
 
   const handleLogout = () => {
@@ -253,7 +280,7 @@ export default function ChatScreen() {
       audioDuration: duration,
     };
 
-    socket.emit(send_message, newMessage);
+    socket.emit("send_message", newMessage);
     setMessages((prev) => [...prev, newMessage]);
     setUserHasScrolledUp(false);
   };
@@ -292,8 +319,14 @@ export default function ChatScreen() {
             secureTextEntry
           />
 
-          <TouchableOpacity style={styles.button} onPress={handleJoin}>
-            <Text style={styles.buttonText}>Enter Room</Text>
+          <TouchableOpacity 
+            style={[styles.button, isJoining && { opacity: 0.7 }]} 
+            onPress={handleJoin}
+            disabled={isJoining}
+          >
+            <Text style={styles.buttonText}>
+              {isJoining ? 'Connecting...' : 'Enter Room'}
+            </Text>
           </TouchableOpacity>
           <Text style={styles.versionText}>
             Version {(Constants.manifest as any)?.version || '1.1.3'}
