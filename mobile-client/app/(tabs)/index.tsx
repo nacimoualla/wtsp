@@ -279,6 +279,7 @@ export default function ChatScreen() {
 
   const renderMessage = ({ item }: { item: any }) => {
     const messageKey = getMessageKey(item);
+    const msgReactions = reactions[messageKey] || {};
     return (
       <SwapableComponent
         message={item}
@@ -289,6 +290,7 @@ export default function ChatScreen() {
         onPressReplyQuote={scrollToMessage}
         highlighted={highlightedMessageKey === messageKey}
         isDarkMode={isDarkMode}
+        reactions={msgReactions}
       />
     );
   };

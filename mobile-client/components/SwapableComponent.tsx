@@ -24,11 +24,12 @@ interface Props {
   onDeleteMessage?: (messageKey: string) => void;
   highlighted?: boolean;
   isDarkMode?: boolean;
+  reactions?: Record<string, number>;
 }
 
 const EMOJI_LIST = ['👍', '❤️', '😂', '😮', '😢'];
 
-const MessageItem = ({ message, currentUsername, onSwipeToReply, onToggleReaction, onPressReplyQuote, onDeleteMessage, highlighted, isDarkMode = false }: Props) => {
+const MessageItem = ({ message, currentUsername, onSwipeToReply, onToggleReaction, onPressReplyQuote, onDeleteMessage, highlighted, isDarkMode = false, reactions = {} }: Props) => {
   const isMe = message.sender === currentUsername;
   const messageKey = `${message.timestamp}_${message.sender}`;
   const [showReactions, setShowReactions] = useState(false);
@@ -72,10 +73,10 @@ const MessageItem = ({ message, currentUsername, onSwipeToReply, onToggleReactio
 
   // Render reactions row
   const renderReactions = () => {
-    if (!message.reactions || Object.keys(message.reactions).length === 0) return null;
+    if (!reactions || Object.keys(reactions).length === 0) return null;
     return (
       <Animated.View entering={FadeIn.duration(300)} style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 4, justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
-        {Object.entries(message.reactions).map(([emoji, count]) => (
+        {Object.entries(reactions).map(([emoji, count]) => (
           <TouchableOpacity
             key={emoji}
             onPress={() => onToggleReaction(messageKey, emoji)}
