@@ -20,11 +20,20 @@ interface Message {
   sender: string;
   text: string;
   timestamp: number;
+  replyTo?: {
+    key: string;
+    text: string;
+    sender: string;
+  };
+  reactions?: Record<string, number>;
 }
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [highlightedMessageKey, setHighlightedMessageKey] = useState<string | null>(null);
+  const [reactions, setReactions] = useState<Record<string, Record<string, number>>>({});
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -156,12 +165,17 @@ export default function ChatPage() {
       setReadReceipts(prev => ({ ...prev, ...updates }));
     });
 
+    socket.on("reaction_update", (updates: Record<string, Record<string, number>>) => {
+      setReactions(prev => ({ ...prev, ...updates }));
+    });
+
     return () => {
       socket.off("chat_history");
       socket.off("new_message");
       socket.off("typing");
       socket.off("users_update");
       socket.off("read_receipts_update");
+      socket.off("reaction_update");
       socket.disconnect();
     };
   }, [isJoined, showNotification, username, emitMessagesRead]);
@@ -204,11 +218,17 @@ export default function ChatPage() {
       sender: username,
       text: inputText,
       timestamp: Date.now(),
+      replyTo: replyingTo ? {
+        key: getMessageKey(replyingTo),
+        text: replyingTo.text,
+        sender: replyingTo.sender
+      } : undefined,
     };
 
     socket.emit("send_message", newMessage);
     setMessages((prev) => [...prev, newMessage]);
     setInputText("");
+    setReplyingTo(null);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -220,6 +240,19 @@ export default function ChatPage() {
     } else {
       emitTyping(false);
     }
+  };
+
+  const scrollToMessage = (messageKey: string) => {
+    const element = document.getElementById(messageKey);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setHighlightedMessageKey(messageKey);
+      setTimeout(() => setHighlightedMessageKey(null), 2000);
+    }
+  };
+
+  const handleToggleReaction = (messageKey: string, emoji: string) => {
+    socket.emit('toggle_reaction', { messageKey, emoji });
   };
 
   // LOBBY
@@ -291,11 +324,35 @@ export default function ChatPage() {
           const messageKey = getMessageKey(msg);
           const readers = readReceipts[messageKey] || [];
           const otherReaders = readers.filter(r => r !== msg.sender);
+          const isHighlighted = highlightedMessageKey === messageKey;
+          const msgReactions = reactions[messageKey] || {};
+          const hasReactions = Object.keys(msgReactions).length > 0;
           return (
             <div
+              id={messageKey}
               key={i}
-              className={`mb-4 flex ${isMe ? "justify-end" : "justify-start"}`}
+              className={`mb-4 flex ${isMe ? "justify-end" : "justify-start"} group relative ${isHighlighted ? "highlight-message" : ""} message-enter`}
             >
+              {/* Reply button - appears on hover */}
+              <button
+                type="button"
+                onClick={() => setReplyingTo(msg)}
+                className="absolute top-0 right-0 -mt-2 -mr-2 rounded-full bg-white p-1 shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                title="Reply"
+              >
+                <svg className="h-4 w-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                </svg>
+              </button>
+              {/* Reaction button - appears on hover */}
+              <button
+                type="button"
+                onClick={() => handleToggleReaction(messageKey, '👍')}
+                className="absolute top-0 right-6 -mt-2 -mr-2 rounded-full bg-white p-1 shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                title="React"
+              >
+                <span className="text-sm">👍</span>
+              </button>
               <div className={`max-w-md ${isMe ? "order-2" : ""}`}>
                 {!isMe && (
                   <p className="mb-1 ml-1 text-xs text-black">
@@ -309,7 +366,30 @@ export default function ChatPage() {
                       : "rounded-bl-sm bg-zinc-200 text-black"
                   }`}
                 >
+                  {/* Reply quote */}
+                  {msg.replyTo && (
+                    <div className="mb-2 cursor-pointer rounded bg-black/5 p-2 text-left" onClick={() => scrollToMessage(msg.replyTo!.key)}>
+                      <p className="text-xs font-semibold text-blue-600">{msg.replyTo.sender}</p>
+                      <p className="text-sm text-zinc-600 line-clamp-2">{msg.replyTo.text}</p>
+                    </div>
+                  )}
                   <p className="text-base text-inherit">{msg.text}</p>
+                  {/* Reactions */}
+                  {hasReactions && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {Object.entries(msgReactions).map(([emoji, count]) => (
+                        <button
+                          key={emoji}
+                          onClick={() => handleToggleReaction(messageKey, emoji)}
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs ${
+                            isMe ? 'bg-white/20 text-white' : 'bg-black/5 text-black'
+                          }`}
+                        >
+                          <span>{emoji} {count}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   {otherReaders.length > 0 && (
                     <div className={`mt-1 flex items-center gap-1 ${isMe ? "justify-end" : "justify-start"}`}>
                       <svg className="h-3 w-3 text-current opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -347,22 +427,43 @@ export default function ChatPage() {
       {/* Input */}
       <form
         onSubmit={handleSendMessage}
-        className="flex items-center gap-3 border-t border-zinc-200 bg-white px-6 py-4"
+        className="flex flex-col gap-2 border-t border-zinc-200 bg-white px-6 py-4"
       >
-        <input
-          type="text"
-          placeholder="Type a message..."
-          value={inputText}
-          onChange={handleInputChange}
-          className="flex-1 rounded-full border bg-white text-black placeholder-zinc-500 border-zinc-300 px-5 py-2.5 text-base outline-none focus:border-blue-500"
-        />
-        <button
-          type="submit"
-          disabled={!inputText.trim()}
-          className="rounded-full bg-blue-600 px-6 py-2.5 font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
-        >
-          Send
-        </button>
+        {replyingTo && (
+          <div className="flex items-center gap-2 rounded-lg bg-zinc-100 px-4 py-2">
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-blue-600">
+                Replying to {replyingTo.sender}
+              </p>
+              <p className="text-sm text-zinc-600 truncate">
+                {replyingTo.text}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setReplyingTo(null)}
+              className="text-zinc-400 hover:text-zinc-600"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+        <div className="flex items-center gap-3">
+          <input
+            type="text"
+            placeholder="Type a message..."
+            value={inputText}
+            onChange={handleInputChange}
+            className="flex-1 rounded-full border bg-white text-black placeholder-zinc-500 border-zinc-300 px-5 py-2.5 text-base outline-none focus:border-blue-500"
+          />
+          <button
+            type="submit"
+            disabled={!inputText.trim()}
+            className="rounded-full bg-blue-600 px-6 py-2.5 font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+          >
+            Send
+          </button>
+        </div>
       </form>
     </div>
   );

@@ -43,3 +43,34 @@ body {
     transform: translateY(-4px) scale(1);
   }
 }
+
+/* Message entry animation */
+@keyframes slideUpFade {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.message-enter {
+  animation: slideUpFade 0.4s ease-out;
+}
+
+/* Highlight animation for original message */
+@keyframes highlightPulse {
+  0% {
+    background-color: inherit;
+  }
+  50% {
+    background-color: #fef08a;
+  }
+  100% {
+    background-color: inherit;
+  }
+}
+.highlight-message {
+  animation: highlightPulse 2s ease-in-out;
+}

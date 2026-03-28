@@ -8,6 +8,8 @@ import { io } from 'socket.io-client';
 import { Stack } from 'expo-router';
 import { registerForPushNotificationsAsync, showLocalNotification } from '../../utils/notifications';
 import Constants from 'expo-constants';
+import SwapableComponent from '../../components/SwapableComponent';
+
 
 // ⚠️ CRITICAL MOBILE GOTCHA:
 // You cannot use "localhost" on a mobile device because the phone looks for a server
@@ -27,6 +29,8 @@ const socket = io(SERVER_URL, {
 
 const SECRET_PASSWORD = "bzizila";
 
+const getMessageKey = (message: { timestamp: number; sender: string }) => `${message.timestamp}_${message.sender}`;
+
 export default function ChatScreen() {
   console.log('ChatScreen rendered, SERVER_URL:', SERVER_URL);
   const [messages, setMessages] = useState<any[]>([]);
@@ -38,7 +42,10 @@ export default function ChatScreen() {
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const [activeUsers, setActiveUsers] = useState<string[]>([]);
   const [readReceipts, setReadReceipts] = useState<Record<string, string[]>>({});
+  const [reactions, setReactions] = useState<Record<string, Record<string, number>>>({});
   const [isConnected, setIsConnected] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<any>(null); // Stores the message we are replying to
+  const [highlightedMessageKey, setHighlightedMessageKey] = useState<string | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTypingRef = useRef(false);
 
@@ -114,6 +121,10 @@ export default function ChatScreen() {
       setReadReceipts(prev => ({ ...prev, ...updates }));
     });
 
+    socket.on("reaction_update", (updates: Record<string, Record<string, number>>) => {
+      setReactions(prev => ({ ...prev, ...updates }));
+    });
+
     return () => {
       socket.off('connect');
       socket.off('disconnect');
@@ -123,6 +134,7 @@ export default function ChatScreen() {
       socket.off("typing");
       socket.off("users_update");
       socket.off("read_receipts_update");
+      socket.off("reaction_update");
       socket.disconnect();
     };
   }, [isJoined, username]);
@@ -167,12 +179,18 @@ export default function ChatScreen() {
     const newMessage = {
       sender: username,
       text: inputText,
+      replyTo: replyingTo ? {
+        key: getMessageKey(replyingTo),
+        text: replyingTo.text,
+        sender: replyingTo.sender
+      } : null,
       timestamp: Date.now()
     };
 
     socket.emit("send_message", newMessage);
     setMessages((prev) => [...prev, newMessage]);
     setInputText("");
+    setReplyingTo(null);
   };
 
   // 1. THE LOBBY
@@ -213,15 +231,34 @@ export default function ChatScreen() {
   }
 
   // 2. THE CHAT ROOM
+  const onSwipeToReply = (message: any) => {
+    setReplyingTo(message);
+  };
+
+  const onToggleReaction = (messageKey: string, emoji: string) => {
+    socket.emit('toggle_reaction', { messageKey, emoji });
+  };
+
+  const scrollToMessage = (messageKey: string) => {
+    const index = messages.findIndex(msg => getMessageKey(msg) === messageKey);
+    if (index >= 0) {
+      flatListRef.current?.scrollToIndex({ index, animated: true });
+      setHighlightedMessageKey(messageKey);
+      setTimeout(() => setHighlightedMessageKey(null), 2000);
+    }
+  };
+
   const renderMessage = ({ item }: { item: any }) => {
-    const isMe = item.sender === username;
+    const messageKey = getMessageKey(item);
     return (
-      <View style={[styles.messageWrapper, isMe ? styles.messageMe : styles.messageThem]}>
-        {!isMe && <Text style={styles.senderName}>{item.sender}</Text>}
-        <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleThem]}>
-          <Text style={isMe ? styles.textMe : styles.textThem}>{item.text}</Text>
-        </View>
-      </View>
+      <SwapableComponent
+        message={item}
+        currentUsername={username}
+        onSwipeToReply={onSwipeToReply}
+        onToggleReaction={onToggleReaction}
+        onPressReplyQuote={scrollToMessage}
+        highlighted={highlightedMessageKey === messageKey}
+      />
     );
   };
 
@@ -275,6 +312,7 @@ export default function ChatScreen() {
         </View>
       )}
 
+
       <KeyboardAvoidingView
         style={styles.flex1}
         behavior="padding"
@@ -282,12 +320,28 @@ export default function ChatScreen() {
         <FlatList
           ref={flatListRef}
           data={messages}
-          keyExtractor={(_, index) => index.toString()}
           renderItem={renderMessage}
+          keyExtractor={(item) => `${item.timestamp}_${item.sender}`}
           contentContainerStyle={styles.listContent}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+          onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
         />
-
+        {/* Reply bar above input */}
+        {replyingTo && (
+          <View style={styles.replyBar}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontWeight: 'bold', color: '#007AFF' }}>
+                Replying to {replyingTo.sender}
+              </Text>
+              <Text numberOfLines={1} style={{ color: '#666' }}>
+                {replyingTo.text}
+              </Text>
+            </View>
+            <TouchableOpacity onPress={() => setReplyingTo(null)}>
+              <Text style={{ color: '#999', fontWeight: 'bold' }}>✕</Text>
+            </TouchableOpacity>
+          </View>
+        )}
         <View style={[styles.inputRow, { paddingBottom: insets.bottom + (Platform.OS === 'android' ? 48 : 0) + 10 }]}>
           <TextInput
             style={styles.chatInput}
@@ -353,5 +407,52 @@ const styles = StyleSheet.create({
   inputRow: { flexDirection: 'row', padding: 10, backgroundColor: 'white', borderTopWidth: 1, borderColor: '#eee' },
   chatInput: { flex: 1, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fff', borderRadius: 25, paddingHorizontal: 15, paddingVertical: 10, fontSize: 16, marginRight: 10, color: '#000' },
   sendButton: { backgroundColor: '#2563eb', justifyContent: 'center', paddingHorizontal: 20, borderRadius: 25 },
-  sendButtonDisabled: { opacity: 0.5 }
+  sendButtonDisabled: { opacity: 0.5 },
+
+  // The bar that appears above the TextInput
+  replyBar: {
+    flexDirection: 'row',
+    backgroundColor: '#f0f0f0', // Light gray background
+    borderLeftWidth: 4,
+    borderLeftColor: '#007AFF', // The WhatsApp-style blue/green accent
+    padding: 10,
+    marginHorizontal: 10,
+    marginTop: 5,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    alignItems: 'center',
+    // Adds a subtle shadow so it looks like it's "floating" over the chat
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 5, 
+  },
+
+  // The small quote box inside the actual Message Bubble
+  replyQuoteInBubble: {
+    backgroundColor: 'rgba(0,0,0,0.05)', // Very light overlay
+    borderLeftWidth: 3,
+    borderLeftColor: '#007AFF',
+    padding: 8,
+    borderRadius: 4,
+    marginBottom: 4,
+  },
+
+  replySenderName: {
+    fontWeight: 'bold',
+    fontSize: 12,
+    color: '#007AFF',
+    marginBottom: 2,
+  },
+
+  replyContentText: {
+    fontSize: 13,
+    color: '#555',
+  },
+
+  closeReplyButton: {
+    padding: 8,
+    marginLeft: 10,
+  }
 });

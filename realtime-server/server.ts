@@ -18,7 +18,7 @@ const io = new Server(httpServer, {
 
 // 2. Start the HTTP Server and connect to Redis
 const PORT = process.env.PORT || 4000;
-httpServer.listen(PORT, '0.0.0.0', async () => {
+  httpServer.listen(Number(PORT), '0.0.0.0', async () => {
   await connectRedis(); // This calls the function we exported from redisClient.ts
   console.log(`🚀 Real-time server running on http://0.0.0.0:${PORT}`);
 });
@@ -30,6 +30,7 @@ io.on('connection', (socket) => {
   // We are hardcoding the room since it's just you and your friends
   const ROOM_ID = "friend_group_chat";
   const REDIS_ROOM_KEY = `chat:${ROOM_ID}`;
+  const REDIS_REACTIONS_KEY = `reactions:${ROOM_ID}`;
 
   // Typing indicator: map socket id to { username, timeout }
   const typingUsers = new Map<string, { username: string; timeout: ReturnType<typeof setTimeout> }>();
@@ -104,6 +105,35 @@ io.on('connection', (socket) => {
     }
   };
 
+  // Helper to get reactions for a message key
+  const getReactions = async (messageKey: string): Promise<Record<string, number>> => {
+    const data = await redisClient.hGet(REDIS_REACTIONS_KEY, messageKey);
+    return data ? JSON.parse(data) : {};
+  };
+
+  // Helper to set reactions for a message key
+  const setReactions = async (messageKey: string, reactions: Record<string, number>) => {
+    if (Object.keys(reactions).length === 0) {
+      await redisClient.hDel(REDIS_REACTIONS_KEY, messageKey);
+    } else {
+      await redisClient.hSet(REDIS_REACTIONS_KEY, messageKey, JSON.stringify(reactions));
+    }
+  };
+
+  // Helper to broadcast reaction updates for given message keys
+  const broadcastReactionUpdates = async (messageKeys: string[]) => {
+    const updates: Record<string, Record<string, number>> = {};
+    for (const key of messageKeys) {
+      const reactions = await getReactions(key);
+      if (Object.keys(reactions).length > 0) {
+        updates[key] = reactions;
+      }
+    }
+    if (Object.keys(updates).length > 0) {
+      io.to(ROOM_ID).emit("reaction_update", updates);
+    }
+  };
+
   // Helper to clear typing for a socket
   const clearTyping = (socketId: string) => {
     const typingData = typingUsers.get(socketId);
@@ -133,11 +163,18 @@ io.on('connection', (socket) => {
     // render at the top of the screen, and the newest render at the bottom.
     parsedHistory = parsedHistory.reverse();
     
+    // Fetch reactions for each message
+    const messageKeys = parsedHistory.map(msg => getMessageKey(msg));
+    const reactionsPromises = messageKeys.map(key => getReactions(key));
+    const reactionsArray = await Promise.all(reactionsPromises);
+    parsedHistory.forEach((msg, idx) => {
+      msg.reactions = reactionsArray[idx];
+    });
+    
     // Send the correctly ordered history only to the user who just joined
     socket.emit("chat_history", parsedHistory);
     
     // Send read receipts for these messages
-    const messageKeys = parsedHistory.map(msg => getMessageKey(msg));
     emitReadReceiptsToSocket(socket, messageKeys);
   });
 
@@ -237,6 +274,27 @@ io.on('connection', (socket) => {
     if (changedKeys.length > 0) {
       broadcastReadReceipts(changedKeys);
     }
+  });
+
+  // EVENT H: User toggles a reaction
+  socket.on("toggle_reaction", async (data: { messageKey: string; emoji: string }) => {
+    const username = activeUsers.get(socket.id);
+    if (!username) return;
+    const { messageKey, emoji } = data;
+    const reactions = await getReactions(messageKey);
+    if (reactions[emoji] && reactions[emoji] > 0) {
+      // If user already reacted with this emoji, remove their reaction
+      // For simplicity, we'll just decrement count (or remove if zero)
+      reactions[emoji] = (reactions[emoji] || 1) - 1;
+      if (reactions[emoji] <= 0) {
+        delete reactions[emoji];
+      }
+    } else {
+      // Add reaction
+      reactions[emoji] = (reactions[emoji] || 0) + 1;
+    }
+    await setReactions(messageKey, reactions);
+    broadcastReactionUpdates([messageKey]);
   });
 
   // EVENT C: User Disconnects
