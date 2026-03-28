@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { Swipeable } from "react-native-gesture-handler";
 import { View, Text, Animated as RNAnimated, TouchableOpacity } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import Animated, { FadeInDown, FadeIn } from "react-native-reanimated";
 
 interface Message {
   sender: string;
